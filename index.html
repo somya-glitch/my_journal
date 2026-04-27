@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Journal</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;1,400&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- WRITE PAGE -->
+  <div id="page-write" class="page active">
+    <header>
+      <div class="header-left">
+        <h1>Journal</h1>
+        <span id="today-label"></span>
+      </div>
+      <button class="btn-ghost" onclick="showPage('entries')">All entries →</button>
+    </header>
+
+    <main>
+      <div class="mood-row">
+        <span class="label">How are you feeling?</span>
+        <div class="moods">
+          <button class="mood" data-mood="😊">😊</button>
+          <button class="mood" data-mood="😌">😌</button>
+          <button class="mood" data-mood="😔">😔</button>
+          <button class="mood" data-mood="😤">😤</button>
+          <button class="mood" data-mood="🤩">🤩</button>
+        </div>
+      </div>
+
+      <div class="textarea-wrap">
+        <textarea
+          id="entry-text"
+          placeholder="Write anything. No rules here."
+          spellcheck="true"
+        ></textarea>
+        <div class="word-count"><span id="word-count">0</span> words</div>
+      </div>
+
+      <button class="btn-primary" onclick="saveEntry()">Save entry</button>
+    </main>
+  </div>
+
+  <!-- ENTRIES PAGE -->
+  <div id="page-entries" class="page">
+    <header>
+      <div class="header-left">
+        <button class="btn-ghost" onclick="showPage('write')">← Write</button>
+        <h2>All entries</h2>
+      </div>
+      <span id="entry-count" class="label"></span>
+    </header>
+
+    <main>
+      <div id="entries-list"></div>
+      <div id="empty-state" class="empty-state" style="display:none">
+        <p>No entries yet.</p>
+        <p>Start writing today.</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- DETAIL PAGE -->
+  <div id="page-detail" class="page">
+    <header>
+      <button class="btn-ghost" onclick="showPage('entries')">← Back</button>
+      <div id="detail-meta"></div>
+    </header>
+    <main>
+      <div id="detail-body" class="detail-body"></div>
+      <button class="btn-danger" onclick="deleteCurrentEntry()">Delete entry</button>
+    </main>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
