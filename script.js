@@ -252,3 +252,20 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+async function subscribeEmail() {
+  const email = document.getElementById('reminder-email').value.trim();
+  if (!email) { showToast('Enter your email first!'); return; }
+
+  try {
+    const res = await fetch('https://myjournalbackend-production.up.railway.app/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    showToast(data.message);
+    document.getElementById('reminder-email').value = '';
+  } catch (err) {
+    showToast('Something went wrong. Try again!');
+  }
+}
