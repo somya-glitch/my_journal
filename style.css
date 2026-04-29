@@ -389,3 +389,58 @@ textarea::placeholder {
     min-height: 200px;
   }
 }
+.reminder-banner {
+  position: fixed;
+  bottom: calc(var(--nav-h) + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--amber-mid);
+  border-radius: 30px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--shadow-md);
+  z-index: 99;
+  white-space: nowrap;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 90vw;
+}
+
+.reminder-banner span {
+  font-size: 13px;
+  color: var(--text2);
+  font-weight: 500;
+}
+
+.reminder-banner input {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 13px;
+  outline: none;
+  width: 180px;
+  font-family: 'Nunito', sans-serif;
+}
+
+.reminder-banner input:focus {
+  border-color: var(--amber);
+}
+
+.reminder-banner button {
+  background: var(--amber);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+}
+
+.reminder-banner button:hover {
+  background: #c46820;
+}
