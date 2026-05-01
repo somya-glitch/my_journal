@@ -257,7 +257,7 @@ async function subscribeEmail() {
   if (!email) { showToast('Enter your email first!'); return; }
 
   try {
-    const res = await fetch('https://myjournalbackend-production.up.railway.app/subscribe', {
+    const res = await fetch('http://localhost:3000/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
