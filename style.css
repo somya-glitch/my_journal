@@ -391,8 +391,8 @@ textarea::placeholder {
 }
 .reminder-banner {
   position: fixed;
-  bottom: calc(var(--nav-h) + 10px);
-  left: 50%;
+   bottom: 20px;
+   left: 50%;
   transform: translateX(-50%);
   background: var(--surface);
   border: 1px solid var(--amber-mid);
