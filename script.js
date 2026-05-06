@@ -10,7 +10,7 @@ let currentUser = null;    // Current logged-in user
 
 // Backend URL
 const BACKEND_URL = document.querySelector('meta[name="backend-url"]')?.content ||
-  (window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://your-railway-url.up.railway.app');
+  (window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://myjournal-backend.onrender.com');
 
 
 // ===========================
