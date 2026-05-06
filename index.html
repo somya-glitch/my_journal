@@ -10,19 +10,49 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;1,400&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
 </head>
 <body>
+<!-- LOGIN PAGE -->
+<div id="page-login" class="page active">
+  <div class="login-container">
+    <div class="login-box">
+      <h1>MyLife Journal</h1>
+      <p class="login-subtitle">Write, reflect, grow</p>
+      
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="login-email">Email Address</label>
+          <input 
+            type="email" 
+            id="login-email" 
+            placeholder="your@email.com" 
+            required
+          />
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%;">Enter My Journal</button>
+      </form>
+      
+      <p class="login-footer">Your journal is private & secure. No password needed.</p>
+    </div>
+  </div>
+</div>
+
 <!-- Weather Bar -->
 <div id="weather-bar">
   <span id="weather-icon">⏳</span>
   <span id="weather-text">Fetching weather...</span>
+  <button id="logout-btn" class="btn-ghost" style="margin-left: auto; display: none;" onclick="handleLogout()">Logout</button>
 </div>
+
   <!-- WRITE PAGE -->
-  <div id="page-write" class="page active">
+  <div id="page-write" class="page">
     <header>
       <div class="header-left">
         <h1>Journal</h1>
         <span id="today-label"></span>
       </div>
-      <button class="btn-ghost" onclick="showPage('entries')">All entries →</button>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span id="user-email" style="font-size: 12px; color: #a09f9b;"></span>
+        <button class="btn-ghost" onclick="showPage('entries')">All entries →</button>
+      </div>
     </header>
 
     <main>
@@ -82,7 +112,7 @@
   </div>
 <!-- Email Reminder Banner -->
 <div class="reminder-banner">
-  <span>📬 Daily 4pm journal reminder</span>
+  <span>📬 Daily 1:24pm journal reminder</span>
   <input type="email" id="reminder-email" placeholder="your@email.com" />
   <button onclick="subscribeEmail()">Notify me</button>
   <button type="button" id="notification-button" class="btn-secondary" onclick="enableNotifications()">Enable notifications</button>

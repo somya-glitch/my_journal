@@ -6,6 +6,7 @@
 let entries = [];          // All journal entries (array of objects)
 let selectedMood = '';     // Currently selected mood emoji
 let currentEntryId = null; // ID of the entry being viewed in detail
+let currentUser = null;    // Current logged-in user
 
 // Backend URL
 const BACKEND_URL = document.querySelector('meta[name="backend-url"]')?.content ||
@@ -16,15 +17,79 @@ const BACKEND_URL = document.querySelector('meta[name="backend-url"]')?.content 
 //  STARTUP
 // ===========================
 document.addEventListener('DOMContentLoaded', function () {
-  loadEntries();
-  setTodayLabel();
+  checkIfLoggedIn();
+  loadWeather();
   setupMoodButtons();
   setupWordCount();
-  checkBackendAvailability();
-  loadWeather();
-  updateNotificationButton();
 });
 
+
+// ===========================
+//  AUTHENTICATION
+// ===========================
+function checkIfLoggedIn() {
+  const email = localStorage.getItem('userEmail');
+  if (email) {
+    currentUser = email;
+    loadUserSession();
+  }
+}
+
+async function handleLogin(event) {
+  event.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  
+  if (!email) {
+    showToast('Enter your email');
+    return;
+  }
+
+  try {
+    const res = await fetch(BACKEND_URL + '/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    
+    if (!res.ok) {
+      showToast(data.error || 'Login failed');
+      return;
+    }
+
+    // Save login
+    localStorage.setItem('userEmail', email);
+    currentUser = email;
+    
+    showToast('Welcome! 🎉');
+    loadUserSession();
+  } catch (err) {
+    showToast('Connection error. Try again.');
+    console.error(err);
+  }
+}
+
+function handleLogout() {
+  if (confirm('Are you sure you want to logout?')) {
+    localStorage.removeItem('userEmail');
+    currentUser = null;
+    entries = [];
+    saveEntries();
+    showPage('login');
+    document.getElementById('login-email').value = '';
+    showToast('Logged out');
+  }
+}
+
+function loadUserSession() {
+  document.getElementById('user-email').textContent = currentUser;
+  document.getElementById('logout-btn').style.display = 'block';
+  loadEntries();
+  setTodayLabel();
+  checkBackendAvailability();
+  updateNotificationButton();
+  showPage('write');
+}
 
 // ===========================
 //  PAGE NAVIGATION
@@ -43,11 +108,6 @@ function showPage(name) {
     renderEntries();
   }
 }
-
-
-// ===========================
-//  TODAY'S DATE LABEL
-// ===========================
 function setTodayLabel() {
   var label = document.getElementById('today-label');
   var options = { weekday: 'long', day: 'numeric', month: 'long' };
@@ -265,17 +325,19 @@ async function checkBackendAvailability() {
   try {
     const res = await fetch(BACKEND_URL + '/', {
       method: 'GET',
-      mode: 'cors'
+      mode: 'cors',
+      timeout: 5000
     });
     if (res.ok) {
       // Backend is available, show the banner
       document.querySelector('.reminder-banner').style.display = 'flex';
     } else {
-      document.querySelector('.reminder-banner').style.display = 'none';
+      // Backend not available, but still show banner for notifications
+      document.querySelector('.reminder-banner').style.display = 'flex';
     }
   } catch (err) {
-    // Backend not available, hide the banner
-    document.querySelector('.reminder-banner').style.display = 'none';
+    // Backend not available, but show banner anyway for notifications
+    document.querySelector('.reminder-banner').style.display = 'flex';
   }
 }
 
@@ -334,10 +396,10 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      showToast('Notifications enabled!');
+      showToast('Notifications enabled! You\'ll get reminders.');
       showLocalNotification('My Journal', 'Notifications are enabled.');
     } else {
-      showToast('Notifications blocked or dismissed.');
+      showToast('Notifications blocked. Enable in browser settings.');
     }
   } catch (err) {
     showToast('Unable to enable notifications.');
