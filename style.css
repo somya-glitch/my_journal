@@ -398,7 +398,7 @@ textarea::placeholder {
   border: 2px solid #e07b2a;
   border-radius: 30px;
   padding: 10px 16px;
-  display: flex;
+  display: none;
   align-items: center;
   gap: 8px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
@@ -432,4 +432,17 @@ textarea::placeholder {
 }
 .reminder-banner button:hover {
   background: #c46820;
+}
+#weather-bar {
+  background: #fff7ed;
+  border-bottom: 1px solid #fde68a;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #78716c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }

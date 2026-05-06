@@ -7,6 +7,9 @@ let entries = [];          // All journal entries (array of objects)
 let selectedMood = '';     // Currently selected mood emoji
 let currentEntryId = null; // ID of the entry being viewed in detail
 
+// Backend URL
+const BACKEND_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://your-railway-url.up.railway.app';
+
 
 // ===========================
 //  STARTUP
@@ -16,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
   setTodayLabel();
   setupMoodButtons();
   setupWordCount();
+  checkBackendAvailability();
 });
 
 
@@ -252,12 +256,32 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+
+// Check if backend server is available
+async function checkBackendAvailability() {
+  try {
+    const res = await fetch(BACKEND_URL + '/', {
+      method: 'GET',
+      mode: 'cors'
+    });
+    if (res.ok) {
+      // Backend is available, show the banner
+      document.querySelector('.reminder-banner').style.display = 'flex';
+    } else {
+      document.querySelector('.reminder-banner').style.display = 'none';
+    }
+  } catch (err) {
+    // Backend not available, hide the banner
+    document.querySelector('.reminder-banner').style.display = 'none';
+  }
+}
+
 async function subscribeEmail() {
   const email = document.getElementById('reminder-email').value.trim();
   if (!email) { showToast('Enter your email first!'); return; }
 
   try {
-    const res = await fetch('http://localhost:3000/subscribe', {
+    const res = await fetch(BACKEND_URL + '/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
@@ -268,4 +292,46 @@ async function subscribeEmail() {
   } catch (err) {
     showToast('Something went wrong. Try again!');
   }
+}
+// Weather Feature
+async function loadWeather() {
+  if (!navigator.geolocation) {
+    document.getElementById('weather-text').textContent = 'Weather not supported';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const temp = data.current_weather.temperature;
+    const code = data.current_weather.weathercode;
+    const icon = getWeatherIcon(code);
+    document.getElementById('weather-icon').textContent = icon;
+    document.getElementById('weather-text').textContent = `${temp}°C — ${getWeatherDesc(code)}`;
+  }, () => {
+    document.getElementById('weather-text').textContent = 'Location access denied';
+  });
+}
+
+function getWeatherIcon(code) {
+  if (code === 0) return '☀️';
+  if (code <= 2) return '⛅';
+  if (code <= 3) return '☁️';
+  if (code <= 67) return '🌧️';
+  if (code <= 77) return '❄️';
+  if (code <= 99) return '⛈️';
+  return '🌤️';
+}
+
+function getWeatherDesc(code) {
+  if (code === 0) return 'Clear sky';
+  if (code <= 2) return 'Partly cloudy';
+  if (code <= 3) return 'Overcast';
+  if (code <= 51) return 'Drizzle';
+  if (code <= 67) return 'Rainy';
+  if (code <= 77) return 'Snowy';
+  if (code <= 99) return 'Thunderstorm';
+  return 'Cloudy';
 }
