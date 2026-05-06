@@ -8,7 +8,8 @@ let selectedMood = '';     // Currently selected mood emoji
 let currentEntryId = null; // ID of the entry being viewed in detail
 
 // Backend URL
-const BACKEND_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://your-railway-url.up.railway.app';
+const BACKEND_URL = document.querySelector('meta[name="backend-url"]')?.content ||
+  (window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://your-railway-url.up.railway.app');
 
 
 // ===========================
@@ -21,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function () {
   setupWordCount();
   checkBackendAvailability();
   loadWeather();
+  updateNotificationButton();
 });
 
 
@@ -288,10 +290,70 @@ async function subscribeEmail() {
       body: JSON.stringify({ email })
     });
     const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Subscription failed');
+      return;
+    }
     showToast(data.message);
     document.getElementById('reminder-email').value = '';
+    if (Notification.permission === 'granted') {
+      showLocalNotification('Subscribed!', 'You will get daily email reminders at 4PM.');
+    }
   } catch (err) {
     showToast('Something went wrong. Try again!');
+  }
+}
+
+function updateNotificationButton() {
+  const button = document.getElementById('notification-button');
+  if (!button || !('Notification' in window)) {
+    if (button) button.style.display = 'none';
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    button.textContent = 'Notifications enabled';
+    button.disabled = true;
+  } else if (Notification.permission === 'denied') {
+    button.textContent = 'Notifications blocked';
+    button.disabled = true;
+  } else {
+    button.textContent = 'Enable notifications';
+    button.disabled = false;
+  }
+}
+
+async function enableNotifications() {
+  if (!('Notification' in window)) {
+    showToast('Browser notifications are not supported here.');
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    showToast('Notifications already enabled.');
+    return;
+  }
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      showToast('Notifications enabled!');
+      showLocalNotification('My Journal', 'Notifications are enabled.');
+    } else {
+      showToast('Notifications blocked or dismissed.');
+    }
+  } catch (err) {
+    showToast('Unable to enable notifications.');
+  }
+  updateNotificationButton();
+}
+
+function showLocalNotification(title, body) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    new Notification(title, {
+      body,
+      icon: '/favicon.ico'
+    });
+  } catch (err) {
+    console.error('Notification error:', err);
   }
 }
 // Weather Feature

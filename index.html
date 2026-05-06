@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="backend-url" content="https://your-railway-url.up.railway.app" />
   <title>My Journal</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -84,6 +85,7 @@
   <span>📬 Daily 4pm journal reminder</span>
   <input type="email" id="reminder-email" placeholder="your@email.com" />
   <button onclick="subscribeEmail()">Notify me</button>
+  <button type="button" id="notification-button" class="btn-secondary" onclick="enableNotifications()">Enable notifications</button>
 </div>
   <!-- TOAST -->
   <div id="toast"></div>

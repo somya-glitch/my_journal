@@ -226,6 +226,22 @@ textarea::placeholder {
   border-color: #bbb;
 }
 
+.btn-secondary {
+  background: white;
+  color: #e07b2a;
+  border: 1px solid #e07b2a;
+  border-radius: var(--radius);
+  padding: 10px 18px;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-secondary:hover {
+  background: #fff4ea;
+}
+
 .btn-danger {
   background: transparent;
   color: var(--danger);
