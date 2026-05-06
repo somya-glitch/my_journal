@@ -74,9 +74,15 @@ async function handleSignup(event) {
   event.preventDefault();
   const email = document.getElementById('signup-email').value.trim();
   const password = document.getElementById('signup-password').value;
+  const confirmPassword = document.getElementById('signup-confirm-password').value;
   
   if (!email || !password) {
     showToast('Enter email and password');
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    showToast('Passwords do not match');
     return;
   }
 
