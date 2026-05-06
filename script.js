@@ -69,6 +69,36 @@ async function handleLogin(event) {
   }
 }
 
+async function handleSignup(event) {
+  event.preventDefault();
+  const email = document.getElementById('signup-email').value.trim();
+  
+  if (!email) {
+    showToast('Enter your email');
+    return;
+  }
+
+  try {
+    const res = await fetch(BACKEND_URL + '/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    
+    if (!res.ok) {
+      showToast(data.error || 'Signup failed');
+      return;
+    }
+
+    showToast('Account created! Please login.');
+    showPage('login');
+  } catch (err) {
+    showToast('Connection error. Try again.');
+    console.error(err);
+  }
+}
+
 function handleLogout() {
   if (confirm('Are you sure you want to logout?')) {
     localStorage.removeItem('userEmail');

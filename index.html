@@ -29,7 +29,32 @@
         <button type="submit" class="btn-primary" style="width: 100%;">Enter My Journal</button>
       </form>
       
-      <p class="login-footer">Your journal is private & secure. No password needed.</p>
+      <p class="login-footer">Your journal is private & secure. No password needed.<br><a href="#" onclick="showPage('signup')">New here? Sign up</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- SIGNUP PAGE -->
+<div id="page-signup" class="page">
+  <div class="login-container">
+    <div class="login-box">
+      <h1>Sign Up for MyLife Journal</h1>
+      <p class="login-subtitle">Create your account</p>
+      
+      <form id="signup-form" onsubmit="handleSignup(event)">
+        <div class="form-group">
+          <label for="signup-email">Email Address</label>
+          <input 
+            type="email" 
+            id="signup-email" 
+            placeholder="your@email.com" 
+            required
+          />
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%;">Sign Up</button>
+      </form>
+      
+      <p class="login-footer"><a href="#" onclick="showPage('login')">Already have an account? Login</a></p>
     </div>
   </div>
 </div>
