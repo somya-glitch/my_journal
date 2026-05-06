@@ -322,6 +322,10 @@ async function loadWeather() {
     }
   }, () => {
     document.getElementById('weather-text').textContent = 'Location access denied';
+  }, {
+    timeout: 7000,
+    maximumAge: 0,
+    enableHighAccuracy: false
   });
 }
 
