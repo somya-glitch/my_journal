@@ -38,9 +38,10 @@ function checkIfLoggedIn() {
 async function handleLogin(event) {
   event.preventDefault();
   const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
   
-  if (!email) {
-    showToast('Enter your email');
+  if (!email || !password) {
+    showToast('Enter email and password');
     return;
   }
 
@@ -48,7 +49,7 @@ async function handleLogin(event) {
     const res = await fetch(BACKEND_URL + '/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email, password })
     });
     const data = await res.json();
     
@@ -72,9 +73,10 @@ async function handleLogin(event) {
 async function handleSignup(event) {
   event.preventDefault();
   const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
   
-  if (!email) {
-    showToast('Enter your email');
+  if (!email || !password) {
+    showToast('Enter email and password');
     return;
   }
 
@@ -82,7 +84,7 @@ async function handleSignup(event) {
     const res = await fetch(BACKEND_URL + '/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email, password })
     });
     const data = await res.json();
     

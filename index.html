@@ -26,10 +26,19 @@
             required
           />
         </div>
-        <button type="submit" class="btn-primary" style="width: 100%;">Enter My Journal</button>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input 
+            type="password" 
+            id="login-password" 
+            placeholder="Enter your password" 
+            required
+          />
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%;">Login</button>
       </form>
       
-      <p class="login-footer">Your journal is private & secure. No password needed.<br><a href="#" onclick="showPage('signup')">New here? Sign up</a></p>
+      <p class="login-footer">Don't have an account? <a href="#" onclick="showPage('signup')">Sign up</a></p>
     </div>
   </div>
 </div>
@@ -49,6 +58,16 @@
             id="signup-email" 
             placeholder="your@email.com" 
             required
+          />
+        </div>
+        <div class="form-group">
+          <label for="signup-password">Password</label>
+          <input 
+            type="password" 
+            id="signup-password" 
+            placeholder="Create a password (min 6 chars)" 
+            required
+            minlength="6"
           />
         </div>
         <button type="submit" class="btn-primary" style="width: 100%;">Sign Up</button>
