@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
   setupMoodButtons();
   setupWordCount();
   checkBackendAvailability();
+  loadWeather();
 });
 
 
@@ -303,13 +304,22 @@ async function loadWeather() {
     const lat = pos.coords.latitude;
     const lon = pos.coords.longitude;
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const temp = data.current_weather.temperature;
-    const code = data.current_weather.weathercode;
-    const icon = getWeatherIcon(code);
-    document.getElementById('weather-icon').textContent = icon;
-    document.getElementById('weather-text').textContent = `${temp}°C — ${getWeatherDesc(code)}`;
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.current_weather) {
+        throw new Error('No weather data');
+      }
+      const temp = data.current_weather.temperature;
+      const code = data.current_weather.weathercode;
+      const icon = getWeatherIcon(code);
+      document.getElementById('weather-icon').textContent = icon;
+      document.getElementById('weather-text').textContent = `${temp}°C — ${getWeatherDesc(code)}`;
+    } catch (err) {
+      document.getElementById('weather-icon').textContent = '⚠️';
+      document.getElementById('weather-text').textContent = 'Unable to fetch weather';
+      console.error('Weather error:', err);
+    }
   }, () => {
     document.getElementById('weather-text').textContent = 'Location access denied';
   });
