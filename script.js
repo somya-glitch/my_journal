@@ -6,7 +6,7 @@
 let entries = [];          // All journal entries (array of objects)
 let selectedMood = '';     // Currently selected mood emoji
 let currentEntryId = null; // ID of the entry being viewed in detail
-let currentUser = null;    // Current logged-in user
+let currentUser = null;    // Current logged-in user {id, username}
 
 // Backend URL
 const BACKEND_URL = document.querySelector('meta[name="backend-url"]')?.content ||
@@ -28,20 +28,21 @@ document.addEventListener('DOMContentLoaded', function () {
 //  AUTHENTICATION
 // ===========================
 function checkIfLoggedIn() {
-  const email = localStorage.getItem('userEmail');
-  if (email) {
-    currentUser = email;
+  const token = localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  if (token && user) {
+    currentUser = user;
     loadUserSession();
   }
 }
 
 async function handleLogin(event) {
   event.preventDefault();
-  const email = document.getElementById('login-email').value.trim();
+  const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
   
-  if (!email || !password) {
-    showToast('Enter email and password');
+  if (!username || !password) {
+    showToast('Enter username and password');
     return;
   }
 
@@ -49,7 +50,7 @@ async function handleLogin(event) {
     const res = await fetch(BACKEND_URL + '/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ username, password })
     });
     const data = await res.json();
     
@@ -58,9 +59,10 @@ async function handleLogin(event) {
       return;
     }
 
-    // Save login
-    localStorage.setItem('userEmail', email);
-    currentUser = email;
+    // Save token and user
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    currentUser = data.user;
     
     showToast('Welcome! 🎉');
     loadUserSession();
@@ -72,12 +74,12 @@ async function handleLogin(event) {
 
 async function handleSignup(event) {
   event.preventDefault();
-  const email = document.getElementById('signup-email').value.trim();
+  const username = document.getElementById('signup-username').value.trim();
   const password = document.getElementById('signup-password').value;
   const confirmPassword = document.getElementById('signup-confirm-password').value;
   
-  if (!email || !password) {
-    showToast('Enter email and password');
+  if (!username || !password) {
+    showToast('Enter username and password');
     return;
   }
 
@@ -90,7 +92,7 @@ async function handleSignup(event) {
     const res = await fetch(BACKEND_URL + '/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ username, password })
     });
     const data = await res.json();
     
@@ -107,20 +109,23 @@ async function handleSignup(event) {
   }
 }
 
+function loginWithGoogle() {
+  window.location.href = BACKEND_URL + '/auth/google';
+}
+
 function handleLogout() {
   if (confirm('Are you sure you want to logout?')) {
-    localStorage.removeItem('userEmail');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     currentUser = null;
     entries = [];
-    saveEntries();
     showPage('login');
-    document.getElementById('login-email').value = '';
     showToast('Logged out');
   }
 }
 
 function loadUserSession() {
-  document.getElementById('user-email').textContent = currentUser;
+  document.getElementById('user-username').textContent = currentUser.username;
   document.getElementById('logout-btn').style.display = 'block';
   loadEntries();
   setTodayLabel();
@@ -209,27 +214,38 @@ function saveEntry() {
 
   // Build entry object
   var entry = {
-    id:   Date.now(),           // Unique ID (timestamp)
-    date: new Date().toISOString(), // Full date + time
+    date: new Date().toISOString(),
     mood: selectedMood,
     text: text
   };
 
-  // Add to the front of the list (newest first)
-  entries.unshift(entry);
+  const token = localStorage.getItem('token');
+  fetch(BACKEND_URL + '/entries', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(entry)
+  })
+  .then(res => res.json())
+  .then(() => {
+    // Add to local list
+    entry._id = Date.now(); // temp id
+    entries.unshift(entry);
+    renderEntries();
 
-  // Save to browser storage
-  saveEntries();
+    // Reset the form
+    document.getElementById('entry-text').value = '';
+    document.getElementById('word-count').textContent = '0';
+    document.querySelectorAll('.mood').forEach(function (b) {
+      b.classList.remove('selected');
+    });
+    selectedMood = '';
 
-  // Reset the form
-  document.getElementById('entry-text').value = '';
-  document.getElementById('word-count').textContent = '0';
-  document.querySelectorAll('.mood').forEach(function (b) {
-    b.classList.remove('selected');
+    showToast('Entry saved!');
+  })
+  .catch(err => {
+    showToast('Error saving entry');
+    console.error(err);
   });
-  selectedMood = '';
-
-  showToast('Entry saved!');
 }
 
 
@@ -254,7 +270,7 @@ function renderEntries() {
 
   list.innerHTML = entries.map(function (entry) {
     return (
-      '<div class="entry-item" onclick="showDetail(' + entry.id + ')">' +
+      '<div class="entry-item" onclick="showDetail(\'' + (entry._id || entry.id) + '\')">' +
         '<div class="entry-mood-icon">' + (entry.mood || '📝') + '</div>' +
         '<div class="entry-info">' +
           '<div class="entry-date-str">' + formatDate(entry.date) + '</div>' +
@@ -271,7 +287,7 @@ function renderEntries() {
 //  SHOW ENTRY DETAIL
 // ===========================
 function showDetail(id) {
-  var entry = entries.find(function (e) { return e.id === id; });
+  var entry = entries.find(function (e) { return (e._id || e.id) === id; });
   if (!entry) return;
 
   currentEntryId = id;
@@ -295,12 +311,21 @@ function deleteCurrentEntry() {
   var confirmed = window.confirm('Delete this entry? This cannot be undone.');
   if (!confirmed) return;
 
-  entries = entries.filter(function (e) { return e.id !== currentEntryId; });
-  saveEntries();
-  currentEntryId = null;
-
-  showToast('Entry deleted');
-  showPage('entries');
+  const token = localStorage.getItem('token');
+  fetch(BACKEND_URL + '/entries/' + currentEntryId, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + token }
+  })
+  .then(() => {
+    entries = entries.filter(function (e) { return (e._id || e.id) !== currentEntryId; });
+    currentEntryId = null;
+    showToast('Entry deleted');
+    showPage('entries');
+  })
+  .catch(err => {
+    showToast('Error deleting entry');
+    console.error(err);
+  });
 }
 
 
@@ -312,14 +337,17 @@ function saveEntries() {
 }
 
 function loadEntries() {
-  var stored = localStorage.getItem('journal_entries');
-  if (stored) {
-    try {
-      entries = JSON.parse(stored);
-    } catch (e) {
-      entries = [];
-    }
-  }
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  fetch(BACKEND_URL + '/entries', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  })
+  .then(res => res.json())
+  .then(data => {
+    entries = data;
+    renderEntries();
+  })
+  .catch(err => console.error('Error loading entries:', err));
 }
 
 

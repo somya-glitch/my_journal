@@ -18,11 +18,11 @@
       
       <form id="login-form" onsubmit="handleLogin(event)">
         <div class="form-group">
-          <label for="login-email">Email Address</label>
+          <label for="login-username">Username</label>
           <input 
-            type="email" 
-            id="login-email" 
-            placeholder="your@email.com" 
+            type="text" 
+            id="login-username" 
+            placeholder="Enter your username" 
             required
           />
         </div>
@@ -38,7 +38,7 @@
         <button type="submit" class="btn-primary" style="width: 100%;">Login</button>
       </form>
       
-      <p class="login-footer">Don't have an account? <a href="#" onclick="showPage('signup')">Sign up</a></p>
+      <p class="login-footer">Don't have an account? <a href="#" onclick="showPage('signup')">Sign up</a> | <a href="#" onclick="loginWithGoogle()">Login with Google</a></p>
     </div>
   </div>
 </div>
@@ -52,11 +52,11 @@
       
       <form id="signup-form" onsubmit="handleSignup(event)">
         <div class="form-group">
-          <label for="signup-email">Email Address</label>
+          <label for="signup-username">Username</label>
           <input 
-            type="email" 
-            id="signup-email" 
-            placeholder="your@email.com" 
+            type="text" 
+            id="signup-username" 
+            placeholder="Choose a username" 
             required
           />
         </div>
@@ -103,7 +103,7 @@
         <span id="today-label"></span>
       </div>
       <div style="display: flex; gap: 8px; align-items: center;">
-        <span id="user-email" style="font-size: 12px; color: #a09f9b;"></span>
+        <span id="user-username" style="font-size: 12px; color: #a09f9b;"></span>
         <button class="btn-ghost" onclick="showPage('entries')">All entries →</button>
       </div>
     </header>
