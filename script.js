@@ -287,7 +287,7 @@ function loadUserSession() {
   updateNotificationButton();
   checkBackendAvailability();
   switchTab('write');
-  loadPrompt();
+ // loadPrompt();
 }
 
 // ═══════════════════════════════════════════
@@ -594,7 +594,7 @@ function afterSave() {
   showToast('Entry saved ✨');
   updateStreakBadge();
   renderTagFilterChips();
-  loadPrompt();
+  //loadPrompt();
 }
 
 // ═══════════════════════════════════════════
