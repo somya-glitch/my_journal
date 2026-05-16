@@ -1,18 +1,14 @@
 // ===========================
 //  JOURNAL APP — script.js
 // ===========================
-
 // --- STATE ---
 let entries = [];          // All journal entries (array of objects)
 let selectedMood = '';     // Currently selected mood emoji
 let currentEntryId = null; // ID of the entry being viewed in detail
 let currentUser = null;    // Current logged-in user {id, username}
-
 // Backend URL
 const BACKEND_URL = document.querySelector('meta[name="backend-url"]')?.content ||
   (window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://myjournal-backend.onrender.com');
-
-
 // ===========================
 //  STARTUP
 // ===========================
@@ -22,12 +18,31 @@ document.addEventListener('DOMContentLoaded', function () {
   setupMoodButtons();
   setupWordCount();
 });
-
-
 // ===========================
 //  AUTHENTICATION
 // ===========================
 function checkIfLoggedIn() {
+  // Check for Google OAuth token in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const tokenFromGoogle = urlParams.get('token');
+
+  if (tokenFromGoogle) {
+    try {
+      // Decode user info from JWT payload
+      const payload = JSON.parse(atob(tokenFromGoogle.split('.')[1]));
+      const user = { id: payload.id, username: payload.username };
+      localStorage.setItem('token', tokenFromGoogle);
+      localStorage.setItem('user', JSON.stringify(user));
+      // Clean the token from the URL
+      window.history.replaceState({}, '', window.location.pathname);
+      currentUser = user;
+      loadUserSession();
+      return;
+    } catch (err) {
+      console.error('Failed to parse Google token:', err);
+    }
+  }
+
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   if (token && user) {
@@ -35,7 +50,6 @@ function checkIfLoggedIn() {
     loadUserSession();
   }
 }
-
 async function handleLogin(event) {
   event.preventDefault();
   const username = document.getElementById('login-username').value.trim();
@@ -45,7 +59,6 @@ async function handleLogin(event) {
     showToast('Enter username and password');
     return;
   }
-
   try {
     const res = await fetch(BACKEND_URL + '/auth/login', {
       method: 'POST',
@@ -58,7 +71,6 @@ async function handleLogin(event) {
       showToast(data.error || 'Login failed');
       return;
     }
-
     // Save token and user
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
@@ -71,7 +83,6 @@ async function handleLogin(event) {
     console.error(err);
   }
 }
-
 async function handleSignup(event) {
   event.preventDefault();
   const username = document.getElementById('signup-username').value.trim();
@@ -82,12 +93,10 @@ async function handleSignup(event) {
     showToast('Enter username and password');
     return;
   }
-
   if (password !== confirmPassword) {
     showToast('Passwords do not match');
     return;
   }
-
   try {
     const res = await fetch(BACKEND_URL + '/auth/signup', {
       method: 'POST',
@@ -100,7 +109,6 @@ async function handleSignup(event) {
       showToast(data.error || 'Signup failed');
       return;
     }
-
     showToast('Account created! Please login.');
     showPage('login');
   } catch (err) {
@@ -108,11 +116,9 @@ async function handleSignup(event) {
     console.error(err);
   }
 }
-
 function loginWithGoogle() {
   window.location.href = BACKEND_URL + '/auth/google';
 }
-
 function handleLogout() {
   if (confirm('Are you sure you want to logout?')) {
     localStorage.removeItem('token');
@@ -123,7 +129,6 @@ function handleLogout() {
     showToast('Logged out');
   }
 }
-
 function loadUserSession() {
   document.getElementById('user-username').textContent = currentUser.username;
   document.getElementById('logout-btn').style.display = 'block';
@@ -133,7 +138,6 @@ function loadUserSession() {
   updateNotificationButton();
   showPage('write');
 }
-
 // ===========================
 //  PAGE NAVIGATION
 // ===========================
@@ -142,10 +146,8 @@ function showPage(name) {
   document.querySelectorAll('.page').forEach(function (p) {
     p.classList.remove('active');
   });
-
   // Show the requested page
   document.getElementById('page-' + name).classList.add('active');
-
   // If showing entries, refresh the list
   if (name === 'entries') {
     renderEntries();
@@ -158,21 +160,17 @@ function setTodayLabel() {
   label.style.fontSize = '13px';
   label.style.color = '#a09f9b';
 }
-
-
 // ===========================
 //  MOOD BUTTONS
 // ===========================
 function setupMoodButtons() {
   var buttons = document.querySelectorAll('.mood');
-
   buttons.forEach(function (btn) {
     btn.addEventListener('click', function () {
       // Deselect all
       buttons.forEach(function (b) {
         b.classList.remove('selected');
       });
-
       // Select this one (or deselect if already chosen)
       if (selectedMood === btn.dataset.mood) {
         selectedMood = '';
@@ -183,15 +181,12 @@ function setupMoodButtons() {
     });
   });
 }
-
-
 // ===========================
 //  WORD COUNT
 // ===========================
 function setupWordCount() {
   var ta = document.getElementById('entry-text');
   var counter = document.getElementById('word-count');
-
   ta.addEventListener('input', function () {
     var words = ta.value.trim().split(/\s+/).filter(function (w) {
       return w.length > 0;
@@ -199,26 +194,21 @@ function setupWordCount() {
     counter.textContent = ta.value.trim() === '' ? 0 : words.length;
   });
 }
-
-
 // ===========================
 //  SAVE AN ENTRY
 // ===========================
 function saveEntry() {
   var text = document.getElementById('entry-text').value.trim();
-
   if (text === '') {
     showToast('Write something first!');
     return;
   }
-
   // Build entry object
   var entry = {
     date: new Date().toISOString(),
     mood: selectedMood,
     text: text
   };
-
   const token = localStorage.getItem('token');
   fetch(BACKEND_URL + '/entries', {
     method: 'POST',
@@ -231,7 +221,6 @@ function saveEntry() {
     entry._id = Date.now(); // temp id
     entries.unshift(entry);
     renderEntries();
-
     // Reset the form
     document.getElementById('entry-text').value = '';
     document.getElementById('word-count').textContent = '0';
@@ -239,7 +228,6 @@ function saveEntry() {
       b.classList.remove('selected');
     });
     selectedMood = '';
-
     showToast('Entry saved!');
   })
   .catch(err => {
@@ -247,8 +235,6 @@ function saveEntry() {
     console.error(err);
   });
 }
-
-
 // ===========================
 //  RENDER ENTRIES LIST
 // ===========================
@@ -256,18 +242,14 @@ function renderEntries() {
   var list    = document.getElementById('entries-list');
   var empty   = document.getElementById('empty-state');
   var counter = document.getElementById('entry-count');
-
   counter.textContent = entries.length + (entries.length === 1 ? ' entry' : ' entries');
-
   if (entries.length === 0) {
     list.style.display  = 'none';
     empty.style.display = 'block';
     return;
   }
-
   list.style.display  = '';
   empty.style.display = 'none';
-
   list.innerHTML = entries.map(function (entry) {
     return (
       '<div class="entry-item" onclick="showDetail(\'' + (entry._id || entry.id) + '\')">' +
@@ -281,36 +263,26 @@ function renderEntries() {
     );
   }).join('');
 }
-
-
 // ===========================
 //  SHOW ENTRY DETAIL
 // ===========================
 function showDetail(id) {
   var entry = entries.find(function (e) { return (e._id || e.id) === id; });
   if (!entry) return;
-
   currentEntryId = id;
-
   document.getElementById('detail-meta').innerHTML =
     (entry.mood ? '<span style="font-size:20px">' + entry.mood + '</span>' : '') +
     '<span>' + formatDate(entry.date) + '</span>';
-
   document.getElementById('detail-body').textContent = entry.text;
-
   showPage('detail');
 }
-
-
 // ===========================
 //  DELETE ENTRY
 // ===========================
 function deleteCurrentEntry() {
   if (!currentEntryId) return;
-
   var confirmed = window.confirm('Delete this entry? This cannot be undone.');
   if (!confirmed) return;
-
   const token = localStorage.getItem('token');
   fetch(BACKEND_URL + '/entries/' + currentEntryId, {
     method: 'DELETE',
@@ -327,15 +299,12 @@ function deleteCurrentEntry() {
     console.error(err);
   });
 }
-
-
 // ===========================
 //  LOCAL STORAGE
 // ===========================
 function saveEntries() {
   localStorage.setItem('journal_entries', JSON.stringify(entries));
 }
-
 function loadEntries() {
   const token = localStorage.getItem('token');
   if (!token) return;
@@ -349,8 +318,6 @@ function loadEntries() {
   })
   .catch(err => console.error('Error loading entries:', err));
 }
-
-
 // ===========================
 //  TOAST NOTIFICATION
 // ===========================
@@ -358,13 +325,10 @@ function showToast(message) {
   var toast = document.getElementById('toast');
   toast.textContent = message;
   toast.classList.add('show');
-
   setTimeout(function () {
     toast.classList.remove('show');
   }, 2200);
 }
-
-
 // ===========================
 //  HELPERS
 // ===========================
@@ -377,7 +341,6 @@ function formatDate(isoString) {
     year:    'numeric'
   });
 }
-
 function escapeHtml(str) {
   return str
     .replace(/&/g, '&amp;')
@@ -385,7 +348,6 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
-
 // Check if backend server is available
 async function checkBackendAvailability() {
   try {
@@ -395,22 +357,17 @@ async function checkBackendAvailability() {
       timeout: 5000
     });
     if (res.ok) {
-      // Backend is available, show the banner
       document.querySelector('.reminder-banner').style.display = 'flex';
     } else {
-      // Backend not available, but still show banner for notifications
       document.querySelector('.reminder-banner').style.display = 'flex';
     }
   } catch (err) {
-    // Backend not available, but show banner anyway for notifications
     document.querySelector('.reminder-banner').style.display = 'flex';
   }
 }
-
 async function subscribeEmail() {
   const email = document.getElementById('reminder-email').value.trim();
   if (!email) { showToast('Enter your email first!'); return; }
-
   try {
     const res = await fetch(BACKEND_URL + '/subscribe', {
       method: 'POST',
@@ -431,7 +388,6 @@ async function subscribeEmail() {
     showToast('Something went wrong. Try again!');
   }
 }
-
 function updateNotificationButton() {
   const button = document.getElementById('notification-button');
   if (!button || !('Notification' in window)) {
@@ -449,7 +405,6 @@ function updateNotificationButton() {
     button.disabled = false;
   }
 }
-
 async function enableNotifications() {
   if (!('Notification' in window)) {
     showToast('Browser notifications are not supported here.');
@@ -472,7 +427,6 @@ async function enableNotifications() {
   }
   updateNotificationButton();
 }
-
 function showLocalNotification(title, body) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   try {
@@ -518,7 +472,6 @@ async function loadWeather() {
     enableHighAccuracy: false
   });
 }
-
 function getWeatherIcon(code) {
   if (code === 0) return '☀️';
   if (code <= 2) return '⛅';
@@ -528,7 +481,6 @@ function getWeatherIcon(code) {
   if (code <= 99) return '⛈️';
   return '🌤️';
 }
-
 function getWeatherDesc(code) {
   if (code === 0) return 'Clear sky';
   if (code <= 2) return 'Partly cloudy';
