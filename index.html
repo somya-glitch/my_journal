@@ -1,178 +1,353 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Journal</title>
+  <title>MyLife Journal</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;1,400&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
-<!-- LOGIN PAGE -->
+
+<div class="paper-texture"></div>
+
+<!-- LOGIN -->
 <div id="page-login" class="page active">
   <div class="login-container">
     <div class="login-box">
+      <div class="journal-stamp">est. today</div>
+      <div class="login-logo">
+        <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
+          <rect x="8" y="6" width="32" height="36" rx="4" fill="currentColor" opacity=".07"/>
+          <rect x="6" y="8" width="32" height="36" rx="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <line x1="13" y1="18" x2="31" y2="18" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          <line x1="13" y1="24" x2="31" y2="24" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          <line x1="13" y1="30" x2="23" y2="30" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </div>
       <h1>MyLife Journal</h1>
-      <p class="login-subtitle">Write, reflect, grow</p>
-      
-      <form id="login-form" onsubmit="handleLogin(event)">
-        <div class="form-group">
-          <label for="login-username">Username</label>
-          <input 
-            type="text" 
-            id="login-username" 
-            placeholder="Enter your username" 
-            required
-          />
-        </div>
-        <div class="form-group">
-          <label for="login-password">Password</label>
-          <input 
-            type="password" 
-            id="login-password" 
-            placeholder="Enter your password" 
-            required
-          />
-        </div>
-        <button type="submit" class="btn-primary" style="width: 100%;">Login</button>
-      </form>
-      
-      <p class="login-footer">Don't have an account? <a href="#" onclick="showPage('signup')">Sign up</a> | <a href="#" onclick="loginWithGoogle()">Login with Google</a></p>
+      <p class="login-subtitle">Write. Reflect. Grow.</p>
+      <div class="divider-ornament">✦ ✦ ✦</div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-username" placeholder="your name here…" autocomplete="username"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="keep it secret…"/>
+      </div>
+      <button class="btn-primary full-w" onclick="handleLogin(event)">Open My Journal</button>
+      <p class="login-footer">No account? <a href="#" onclick="showPage('signup')">Sign up</a> · <a href="#" onclick="loginWithGoogle()">Google</a></p>
     </div>
   </div>
 </div>
 
-<!-- SIGNUP PAGE -->
+<!-- SIGNUP -->
 <div id="page-signup" class="page">
   <div class="login-container">
     <div class="login-box">
-      <h1>Sign Up for MyLife Journal</h1>
-      <p class="login-subtitle">Create your account</p>
-      
-      <form id="signup-form" onsubmit="handleSignup(event)">
-        <div class="form-group">
-          <label for="signup-username">Username</label>
-          <input 
-            type="text" 
-            id="signup-username" 
-            placeholder="Choose a username" 
-            required
-          />
-        </div>
-        <div class="form-group">
-          <label for="signup-password">Password</label>
-          <input 
-            type="password" 
-            id="signup-password" 
-            placeholder="Create a password (min 6 chars)" 
-            required
-            minlength="6"
-          />
-        </div>
-        <div class="form-group">
-          <label for="signup-confirm-password">Confirm Password</label>
-          <input 
-            type="password" 
-            id="signup-confirm-password" 
-            placeholder="Confirm your password" 
-            required
-            minlength="6"
-          />
-        </div>
-        <button type="submit" class="btn-primary" style="width: 100%;">Sign Up</button>
-      </form>
-      
+      <div class="journal-stamp">new chapter</div>
+      <h1>Start Your Journal</h1>
+      <p class="login-subtitle">A new story begins here</p>
+      <div class="divider-ornament">✦ ✦ ✦</div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="signup-username" placeholder="choose a name…"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="signup-password" placeholder="min 6 characters…" minlength="6"/>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="signup-confirm-password" placeholder="once more…" minlength="6"/>
+      </div>
+      <button class="btn-primary full-w" onclick="handleSignup(event)">Begin Writing</button>
       <p class="login-footer"><a href="#" onclick="showPage('login')">Already have an account? Login</a></p>
     </div>
   </div>
 </div>
 
-<!-- Weather Bar -->
-<div id="weather-bar">
-  <span id="weather-icon">⏳</span>
-  <span id="weather-text">Fetching weather...</span>
-  <button id="logout-btn" class="btn-ghost" style="margin-left: auto; display: none;" onclick="handleLogout()">Logout</button>
+<!-- TOP BAR -->
+<div id="top-bar">
+  <div id="weather-info">
+    <span id="weather-icon">⏳</span>
+    <span id="weather-text">…</span>
+  </div>
+  <div id="streak-badge" title="Your writing streak">🔥 <span id="streak-count">0</span> day streak</div>
+  <div id="top-bar-right">
+    <button class="icon-btn" onclick="cycleTheme()" id="theme-btn" title="Toggle theme">🌙</button>
+    <button class="icon-btn" onclick="toggleAmbient()" id="ambient-btn" title="Ambient sounds">🔇</button>
+    <span id="user-username" class="user-chip"></span>
+    <button id="logout-btn" class="btn-ghost-sm" style="display:none" onclick="handleLogout()">Logout</button>
+  </div>
 </div>
 
-  <!-- WRITE PAGE -->
-  <div id="page-write" class="page">
-    <header>
-      <div class="header-left">
-        <h1>Journal</h1>
-        <span id="today-label"></span>
-      </div>
-      <div style="display: flex; gap: 8px; align-items: center;">
-        <span id="user-username" style="font-size: 12px; color: #a09f9b;"></span>
-        <button class="btn-ghost" onclick="showPage('entries')">All entries →</button>
-      </div>
-    </header>
+<!-- NAV -->
+<nav id="main-nav" style="display:none">
+  <div class="nav-inner">
+    <button class="nav-tab" data-page="write"    onclick="switchTab('write')">✏️ Write</button>
+    <button class="nav-tab" data-page="entries"  onclick="switchTab('entries')">📖 Entries</button>
+    <button class="nav-tab" data-page="calendar" onclick="switchTab('calendar')">🗓 Calendar</button>
+    <button class="nav-tab" data-page="grateful" onclick="switchTab('grateful')">🌿 Grateful</button>
+    <button class="nav-tab" data-page="insights" onclick="switchTab('insights')">📊 Insights</button>
+    <button class="nav-tab" data-page="capsule"  onclick="switchTab('capsule')">💌 Capsule</button>
+  </div>
+</nav>
 
-    <main>
-      <div class="mood-row">
-        <span class="label">How are you feeling?</span>
-        <div class="moods">
-          <button class="mood" data-mood="😊">😊</button>
-          <button class="mood" data-mood="😌">😌</button>
-          <button class="mood" data-mood="😔">😔</button>
-          <button class="mood" data-mood="😤">😤</button>
-          <button class="mood" data-mood="🤩">🤩</button>
+<!-- ── WRITE ── -->
+<div id="page-write" class="page app-page">
+  <header>
+    <div class="header-left">
+      <h1>Today's Entry</h1>
+      <span id="today-label" class="today-label"></span>
+    </div>
+    <div class="header-right">
+      <span id="autosave-indicator" class="autosave-dot hidden" title="Draft auto-saved">💾 saved</span>
+      <div class="header-quote" id="daily-quote"></div>
+    </div>
+  </header>
+  <main>
+    <div class="mood-row">
+      <span class="label">Feeling</span>
+      <div class="moods">
+        <button class="mood" data-mood="😊">😊</button>
+        <button class="mood" data-mood="😌">😌</button>
+        <button class="mood" data-mood="😔">😔</button>
+        <button class="mood" data-mood="😤">😤</button>
+        <button class="mood" data-mood="🤩">🤩</button>
+        <button class="mood" data-mood="😴">😴</button>
+        <button class="mood" data-mood="🥺">🥺</button>
+        <button class="mood" data-mood="😰">😰</button>
+      </div>
+    </div>
+
+    <div class="tags-row">
+      <span class="label">Tags</span>
+      <div class="tags-input-wrap">
+        <div id="tags-display" class="tags-display"></div>
+        <input type="text" id="tag-input" placeholder="type tag, press Enter…" onkeydown="handleTagInput(event)"/>
+      </div>
+    </div>
+
+    <div class="prompt-card" id="prompt-card">
+      <div class="prompt-header">
+        <span class="prompt-label">✨ Writing prompt</span>
+        <button class="btn-tiny" onclick="loadPrompt()">↺ New</button>
+      </div>
+      <div class="prompt-text" id="prompt-text">Click "New" for an AI-powered writing prompt…</div>
+      <button class="btn-tiny use-prompt-btn" onclick="usePrompt()">Use this prompt →</button>
+    </div>
+
+    <div class="paper-card" id="paper-card">
+      <div class="paper-lines"></div>
+      <div class="margin-line"></div>
+      <textarea id="entry-text" placeholder="Dear journal…" spellcheck="true" oninput="onTextInput()"></textarea>
+      <div class="entry-footer-row">
+        <div class="stats-inline">
+          <span><b id="word-count">0</b> words</span>
+          <span id="read-time">~0 min read</span>
+        </div>
+        <span id="writing-speed" class="writing-speed"></span>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn-primary" onclick="saveEntry()">Save Entry <span class="btn-arrow">→</span></button>
+      <button class="btn-ghost"   onclick="clearDraft()">Clear</button>
+      <button class="btn-ghost"   onclick="exportEntries()" title="Download all entries">⬇ Export</button>
+    </div>
+  </main>
+</div>
+
+<!-- ── ENTRIES ── -->
+<div id="page-entries" class="page app-page">
+  <header>
+    <div class="header-left">
+      <h1>All Entries</h1>
+      <span id="entry-count" class="label"></span>
+    </div>
+  </header>
+  <main>
+    <div class="filter-bar">
+      <input type="text" id="search-input" placeholder="🔍 Search entries…" oninput="filterEntries()"/>
+      <div id="tag-filter-chips" class="tag-filter-chips"></div>
+    </div>
+    <div id="entries-list"></div>
+    <div id="empty-state" class="empty-state" style="display:none">
+      <div class="empty-icon">📝</div>
+      <p>No entries yet.</p>
+      <p class="empty-sub">Start writing today.</p>
+    </div>
+  </main>
+</div>
+
+<!-- ── DETAIL ── -->
+<div id="page-detail" class="page app-page">
+  <header>
+    <button class="btn-ghost" onclick="switchTab('entries')">← Back</button>
+    <div id="detail-meta"></div>
+  </header>
+  <main>
+    <div class="paper-card detail-paper">
+      <div class="paper-lines"></div>
+      <div class="margin-line"></div>
+      <div id="detail-body" class="detail-body"></div>
+    </div>
+    <div id="detail-tags-row" class="detail-tags-row"></div>
+    <button class="btn-danger" onclick="deleteCurrentEntry()">Delete entry</button>
+  </main>
+</div>
+
+<!-- ── CALENDAR ── -->
+<div id="page-calendar" class="page app-page">
+  <header><div class="header-left"><h1>Calendar</h1></div></header>
+  <main>
+    <div class="cal-container">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="prevMonth()">‹</button>
+        <div class="cal-month-year" id="cal-month-year"></div>
+        <button class="cal-nav-btn" onclick="nextMonth()">›</button>
+      </div>
+      <div class="cal-grid-header">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="cal-legend">
+        <span class="legend-title">Mark as:</span>
+        <div class="legend-colors">
+          <button class="legend-chip active" data-color="important" onclick="setMarkColor('important')">⭐ Important</button>
+          <button class="legend-chip" data-color="happy"    onclick="setMarkColor('happy')">💛 Happy</button>
+          <button class="legend-chip" data-color="sad"      onclick="setMarkColor('sad')">💙 Tough</button>
+          <button class="legend-chip" data-color="reminder" onclick="setMarkColor('reminder')">🔔 Reminder</button>
+          <button class="legend-chip" data-color="erase"    onclick="setMarkColor('erase')">✕ Erase</button>
         </div>
       </div>
-
-      <div class="textarea-wrap">
-        <textarea
-          id="entry-text"
-          placeholder="Write anything. No rules here."
-          spellcheck="true"
-        ></textarea>
-        <div class="word-count"><span id="word-count">0</span> words</div>
+      <div class="cal-note-section" id="cal-note-section" style="display:none">
+        <div class="cal-note-header">
+          <span id="cal-note-date-label"></span>
+          <button class="btn-ghost-sm" onclick="closeDateNote()">✕</button>
+        </div>
+        <textarea id="cal-note-text" placeholder="Add a note for this date…" oninput="saveCalNote()"></textarea>
+        <div class="cal-note-entries" id="cal-note-entries"></div>
       </div>
-
-      <button class="btn-primary" onclick="saveEntry()">Save entry</button>
-    </main>
-  </div>
-
-  <!-- ENTRIES PAGE -->
-  <div id="page-entries" class="page">
-    <header>
-      <div class="header-left">
-        <button class="btn-ghost" onclick="showPage('write')">← Write</button>
-        <h2>All entries</h2>
-      </div>
-      <span id="entry-count" class="label"></span>
-    </header>
-
-    <main>
-      <div id="entries-list"></div>
-      <div id="empty-state" class="empty-state" style="display:none">
-        <p>No entries yet.</p>
-        <p>Start writing today.</p>
-      </div>
-    </main>
-  </div>
-
-  <!-- DETAIL PAGE -->
-  <div id="page-detail" class="page">
-    <header>
-      <button class="btn-ghost" onclick="showPage('entries')">← Back</button>
-      <div id="detail-meta"></div>
-    </header>
-    <main>
-      <div id="detail-body" class="detail-body"></div>
-      <button class="btn-danger" onclick="deleteCurrentEntry()">Delete entry</button>
-    </main>
-  </div>
-<!-- Email Reminder Banner -->
-<div class="reminder-banner">
-  <span>📬 Daily 1:24pm journal reminder</span>
-  <input type="email" id="reminder-email" placeholder="your@email.com" />
-  <button onclick="subscribeEmail()">Notify me</button>
-  <button type="button" id="notification-button" class="btn-secondary" onclick="enableNotifications()">Enable notifications</button>
+    </div>
+  </main>
 </div>
-  <!-- TOAST -->
-  <div id="toast"></div>
 
-  <script src="script.js"></script>
+<!-- ── GRATEFUL ── -->
+<div id="page-grateful" class="page app-page">
+  <header>
+    <div class="header-left">
+      <h1>Gratitude</h1>
+      <span class="today-label" id="grateful-date"></span>
+    </div>
+  </header>
+  <main>
+    <div class="grateful-intro">
+      <p class="grateful-quote" id="grateful-rotating-quote">"Gratitude turns what we have into enough."</p>
+    </div>
+    <div class="grateful-card"><div class="grateful-number">1</div><div class="grateful-item-wrap"><p class="grateful-prompt">Today I'm grateful for…</p><input type="text" class="grateful-input" id="grateful-1" placeholder="something that made you smile…"/></div></div>
+    <div class="grateful-card"><div class="grateful-number">2</div><div class="grateful-item-wrap"><p class="grateful-prompt">Someone I appreciate…</p><input type="text" class="grateful-input" id="grateful-2" placeholder="a person who matters to you…"/></div></div>
+    <div class="grateful-card"><div class="grateful-number">3</div><div class="grateful-item-wrap"><p class="grateful-prompt">A moment I want to remember…</p><input type="text" class="grateful-input" id="grateful-3" placeholder="a small joy, a detail, a feeling…"/></div></div>
+    <div id="grateful-extra-wrap"></div>
+    <div class="action-row">
+      <button class="btn-primary" onclick="saveGratitude()">Save Gratitude 🌿</button>
+      <button class="btn-ghost"   onclick="addExtraGratitude()">+ Add more</button>
+    </div>
+    <div id="grateful-history"></div>
+  </main>
+</div>
+
+<!-- ── INSIGHTS ── -->
+<div id="page-insights" class="page app-page">
+  <header><div class="header-left"><h1>Insights</h1></div></header>
+  <main>
+    <div class="stats-strip">
+      <div class="stat-card"><div class="stat-value" id="stat-total-entries">0</div><div class="stat-label">Entries</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-total-words">0</div><div class="stat-label">Words written</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-streak">0</div><div class="stat-label">Day streak 🔥</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-avg-words">0</div><div class="stat-label">Avg words</div></div>
+    </div>
+
+    <div class="insight-section">
+      <h3 class="insight-title">Mood breakdown</h3>
+      <div id="mood-breakdown" class="mood-breakdown"></div>
+    </div>
+
+    <div class="insight-section">
+      <h3 class="insight-title">Writing activity — last 12 weeks</h3>
+      <div class="heatmap-wrap">
+        <div id="heatmap" class="heatmap"></div>
+        <div class="heatmap-legend">
+          <span>Less</span>
+          <div class="heatmap-legend-cells">
+            <div class="hm-cell" data-level="0"></div>
+            <div class="hm-cell" data-level="1"></div>
+            <div class="hm-cell" data-level="2"></div>
+            <div class="hm-cell" data-level="3"></div>
+          </div>
+          <span>More</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-section">
+      <h3 class="insight-title">Achievements</h3>
+      <div id="achievements-grid" class="achievements-grid"></div>
+    </div>
+
+    <div class="insight-section">
+      <h3 class="insight-title">Words you love</h3>
+      <div id="word-cloud" class="word-cloud"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ── TIME CAPSULE ── -->
+<div id="page-capsule" class="page app-page">
+  <header>
+    <div class="header-left">
+      <h1>Time Capsule</h1>
+      <span class="today-label">Letters to your future self</span>
+    </div>
+  </header>
+  <main>
+    <div class="capsule-intro">
+      <p>Write a letter, seal it, and set a date. Locked until then — a gift from your past self.</p>
+    </div>
+    <div class="paper-card capsule-compose">
+      <div class="paper-lines"></div>
+      <div class="margin-line"></div>
+      <div class="capsule-compose-inner">
+        <div class="capsule-header-row">
+          <span class="capsule-to-label">To: Future Me on</span>
+          <input type="date" id="capsule-date" class="capsule-date-input"/>
+        </div>
+        <textarea id="capsule-text" placeholder="Dear future me…&#10;&#10;Today I feel…&#10;I hope by the time you read this…"></textarea>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="btn-primary" onclick="sealCapsule()">Seal &amp; Lock 🔒</button>
+    </div>
+    <div id="capsule-list" class="capsule-list"></div>
+  </main>
+</div>
+
+<!-- TOAST & AUDIO -->
+<div id="toast"></div>
+<audio id="ambient-audio" loop></audio>
+
+<!-- Reminder -->
+<div class="reminder-banner" id="reminder-banner" style="display:none">
+  <span>📬 Daily reminder</span>
+  <input type="email" id="reminder-email" placeholder="your@email.com"/>
+  <button onclick="subscribeEmail()">Notify me</button>
+  <button id="notification-button" onclick="enableNotifications()">🔔 Enable</button>
+  <button class="reminder-close" onclick="document.getElementById('reminder-banner').style.display='none'">✕</button>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>

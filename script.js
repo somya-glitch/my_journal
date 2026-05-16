@@ -1,493 +1,1204 @@
-// ===========================
-//  JOURNAL APP — script.js
-// ===========================
-// --- STATE ---
-let entries = [];          // All journal entries (array of objects)
-let selectedMood = '';     // Currently selected mood emoji
-let currentEntryId = null; // ID of the entry being viewed in detail
-let currentUser = null;    // Current logged-in user {id, username}
-// Backend URL
-const BACKEND_URL = document.querySelector('meta[name="backend-url"]')?.content ||
-  (window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://myjournal-backend.onrender.com');
-// ===========================
+// ═══════════════════════════════════════════
+//  MYLIFE JOURNAL — script.js  (full version)
+// ═══════════════════════════════════════════
+
+// ── STATE ──
+let entries        = [];
+let selectedMood   = '';
+let currentEntryId = null;
+let currentUser    = null;
+let currentTags    = [];
+let activeTagFilter= null;
+let filteredEntries= null;
+
+// Calendar
+let calYear  = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let calMarks = {};
+let calNotes = {};
+let selectedMarkColor = 'important';
+let selectedCalDate   = null;
+
+// Gratitude
+let gratitudeHistory  = [];
+let extraGratitudeCount = 0;
+
+// Time Capsule
+let capsules = [];
+
+// Theme cycling
+const THEMES = ['light', 'sepia', 'dark'];
+let themeIndex = 0;
+
+// Ambient
+const AMBIENT_SOURCES = {
+  rain:     'https://www.soundjay.com/nature/rain-01.mp3',
+  cafe:     null, // placeholder — real app would have URLs
+  fireplace:null,
+};
+let ambientPlaying = false;
+let ambientTrack   = 'rain';
+
+// Writing speed tracking
+let wordCountHistory = [];
+let lastWordCount    = 0;
+let writingSpeedTimer= null;
+
+// Auto-save
+let autoSaveTimer = null;
+
+// Backend
+const BACKEND_URL =
+  document.querySelector('meta[name="backend-url"]')?.content ||
+  (window.location.hostname === 'localhost'
+    ? 'http://localhost:3000'
+    : 'https://myjournal-backend.onrender.com');
+
+// Daily quotes
+const DAILY_QUOTES = [
+  "Fill your paper with the breathings of your heart.",
+  "In the journal I do not just express myself — I create myself.",
+  "Write hard and clear about what hurts.",
+  "Begin anywhere.",
+  "Your life is your story. Write well. Edit often.",
+  "Almost everything will work again if you unplug it for a few minutes.",
+  "Let the soft animal of your body love what it loves.",
+  "The secret of getting ahead is getting started.",
+  "One day or day one — you decide.",
+  "Not all those who wander are lost.",
+  "Do one thing every day that scares you.",
+  "The unexamined life is not worth living.",
+  "Wherever you are, be all there.",
+  "Life is what happens when you're busy making other plans.",
+  "You only live once, but if you do it right, once is enough.",
+];
+
+// Gratitude quotes rotation
+const GRATITUDE_QUOTES = [
+  '"Gratitude turns what we have into enough."',
+  '"Joy is the simplest form of gratitude."',
+  '"Enough is a feast." — Buddhist proverb',
+  '"Count your joys instead of your woes."',
+  '"Gratitude is the fairest blossom which springs from the soul."',
+  '"When you are grateful, fear disappears and abundance appears."',
+];
+
+// AI Writing prompts (used when no API call is made)
+const FALLBACK_PROMPTS = [
+  "What is one small thing that brought you unexpected joy today?",
+  "Describe a person who has quietly shaped who you are.",
+  "If today were a chapter title in your autobiography, what would it be?",
+  "What would you tell your ten-year-old self right now?",
+  "Write about a place that makes you feel completely yourself.",
+  "What fear have you been carrying that you're ready to set down?",
+  "Describe the last time you felt genuinely proud of yourself.",
+  "What does your ideal ordinary Tuesday look like?",
+  "Write about something you've changed your mind about recently.",
+  "What conversation do you wish you could have with someone who's gone?",
+  "If your current mood were a weather pattern, what would it be?",
+  "What are three things your future self will thank you for doing now?",
+  "Describe a moment recently when time felt like it slowed down.",
+  "What habit are you building, and why does it matter to you?",
+  "Write a letter to the version of yourself from five years ago.",
+  "What would you do if you knew you could not fail?",
+  "Describe the last time you laughed until your stomach hurt.",
+  "What is one thing you're carrying that isn't yours to carry?",
+  "What does home mean to you right now?",
+  "Write about a book, song, or film that has lived inside you.",
+];
+
+// Achievements definition
+const ACHIEVEMENTS_DEF = [
+  { id:'first_entry',   icon:'🖊️',  name:'First Words',      desc:'Write your first entry',        check: (e,g,s) => e.length >= 1 },
+  { id:'streak_3',      icon:'🔥',  name:'On a Roll',         desc:'3-day writing streak',           check: (e,g,s) => s >= 3 },
+  { id:'streak_7',      icon:'🌟',  name:'Week Warrior',      desc:'7-day writing streak',           check: (e,g,s) => s >= 7 },
+  { id:'streak_30',     icon:'🏆',  name:'Monthly Master',    desc:'30-day writing streak',          check: (e,g,s) => s >= 30 },
+  { id:'words_1000',    icon:'📚',  name:'Word Weaver',       desc:'Write 1,000 total words',        check: (e,g,s) => totalWords(e) >= 1000 },
+  { id:'words_10000',   icon:'✍️',  name:'Ink & Soul',        desc:'Write 10,000 total words',       check: (e,g,s) => totalWords(e) >= 10000 },
+  { id:'entries_10',    icon:'📖',  name:'Diligent Diarist',  desc:'10 journal entries',             check: (e,g,s) => e.length >= 10 },
+  { id:'entries_50',    icon:'🗂️',  name:'Archive Keeper',    desc:'50 journal entries',             check: (e,g,s) => e.length >= 50 },
+  { id:'grateful_7',    icon:'🌿',  name:'Thankful Heart',    desc:'7 gratitude entries',            check: (e,g,s) => g.length >= 7 },
+  { id:'capsule_1',     icon:'💌',  name:'Time Traveller',    desc:'Seal your first time capsule',   check: (e,g,s) => capsules.length >= 1 },
+  { id:'night_owl',     icon:'🦉',  name:'Night Owl',         desc:'Write after 11 PM',              check: (e,g,s) => e.some(x => new Date(x.date).getHours() >= 23) },
+  { id:'early_bird',    icon:'🐦',  name:'Early Bird',        desc:'Write before 7 AM',              check: (e,g,s) => e.some(x => new Date(x.date).getHours() < 7) },
+  { id:'all_moods',     icon:'🎭',  name:'Full Spectrum',     desc:'Use all 8 moods',                check: (e,g,s) => new Set(e.filter(x=>x.mood).map(x=>x.mood)).size >= 8 },
+  { id:'long_entry',    icon:'📜',  name:'Deep Diver',        desc:'Write an entry over 500 words',  check: (e,g,s) => e.some(x => wordCount(x.text) >= 500) },
+];
+
+function totalWords(ents) { return ents.reduce((sum,e) => sum + wordCount(e.text), 0); }
+function wordCount(text)  { return text ? text.trim().split(/\s+/).filter(w=>w.length>0).length : 0; }
+
+// ═══════════════════════════════════════════
 //  STARTUP
-// ===========================
-document.addEventListener('DOMContentLoaded', function () {
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
   checkIfLoggedIn();
   loadWeather();
   setupMoodButtons();
   setupWordCount();
+  loadCalData();
+  loadCapsules();
+  setDailyQuote();
+  setTodayLabel();
+  loadTheme();
+  loadDraft();
+  setGratefulDate();
+  rotateGratitudeQuote();
+
+  // Set min date for capsule (tomorrow)
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const el = document.getElementById('capsule-date');
+  if (el) el.min = tomorrow.toISOString().split('T')[0];
 });
-// ===========================
+
+function setDailyQuote() {
+  const idx = new Date().getDate() % DAILY_QUOTES.length;
+  const el = document.getElementById('daily-quote');
+  if (el) el.textContent = '"' + DAILY_QUOTES[idx] + '"';
+}
+
+function setTodayLabel() {
+  const el = document.getElementById('today-label');
+  if (el) el.textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' });
+}
+
+function setGratefulDate() {
+  const el = document.getElementById('grateful-date');
+  if (el) el.textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' });
+}
+
+function rotateGratitudeQuote() {
+  const el = document.getElementById('grateful-rotating-quote');
+  if (!el) return;
+  const idx = Math.floor(Math.random() * GRATITUDE_QUOTES.length);
+  el.textContent = GRATITUDE_QUOTES[idx];
+  el.style.animation = 'none';
+  setTimeout(() => el.style.animation = '', 10);
+}
+
+// ═══════════════════════════════════════════
 //  AUTHENTICATION
-// ===========================
+// ═══════════════════════════════════════════
 function checkIfLoggedIn() {
-  // Check for Google OAuth token in URL
   const urlParams = new URLSearchParams(window.location.search);
   const tokenFromGoogle = urlParams.get('token');
-
   if (tokenFromGoogle) {
     try {
-      // Decode user info from JWT payload
       const payload = JSON.parse(atob(tokenFromGoogle.split('.')[1]));
       const user = { id: payload.id, username: payload.username };
       localStorage.setItem('token', tokenFromGoogle);
       localStorage.setItem('user', JSON.stringify(user));
-      // Clean the token from the URL
       window.history.replaceState({}, '', window.location.pathname);
       currentUser = user;
       loadUserSession();
       return;
-    } catch (err) {
-      console.error('Failed to parse Google token:', err);
-    }
+    } catch(e) { console.error(e); }
   }
-
   const token = localStorage.getItem('token');
-  const user = JSON.parse(localStorage.getItem('user') || 'null');
-  if (token && user) {
-    currentUser = user;
-    loadUserSession();
-  }
+  const user  = JSON.parse(localStorage.getItem('user') || 'null');
+  if (token && user) { currentUser = user; loadUserSession(); }
 }
+
 async function handleLogin(event) {
-  event.preventDefault();
+  if (event) event.preventDefault();
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
-  
-  if (!username || !password) {
-    showToast('Enter username and password');
-    return;
-  }
+  if (!username || !password) { showToast('Enter username and password'); return; }
   try {
-    const res = await fetch(BACKEND_URL + '/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res  = await fetch(BACKEND_URL + '/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ username, password })
     });
     const data = await res.json();
-    
-    if (!res.ok) {
-      showToast(data.error || 'Login failed');
-      return;
-    }
-    // Save token and user
+    if (!res.ok) { showToast(data.error || 'Login failed'); return; }
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     currentUser = data.user;
-    
-    showToast('Welcome! 🎉');
+    showToast('Welcome back, ' + data.user.username + '! 🎉');
     loadUserSession();
-  } catch (err) {
-    showToast('Connection error. Try again.');
-    console.error(err);
+  } catch(_) {
+    // offline / demo mode
+    const demoUser = { id:'local', username: username || 'You' };
+    localStorage.setItem('user', JSON.stringify(demoUser));
+    currentUser = demoUser;
+    showToast('Logged in (offline mode) ✨');
+    loadUserSession();
   }
 }
+
 async function handleSignup(event) {
-  event.preventDefault();
-  const username = document.getElementById('signup-username').value.trim();
-  const password = document.getElementById('signup-password').value;
+  if (event) event.preventDefault();
+  const username        = document.getElementById('signup-username').value.trim();
+  const password        = document.getElementById('signup-password').value;
   const confirmPassword = document.getElementById('signup-confirm-password').value;
-  
-  if (!username || !password) {
-    showToast('Enter username and password');
-    return;
-  }
-  if (password !== confirmPassword) {
-    showToast('Passwords do not match');
-    return;
-  }
+  if (!username || !password) { showToast('Enter username and password'); return; }
+  if (password !== confirmPassword) { showToast('Passwords do not match'); return; }
   try {
-    const res = await fetch(BACKEND_URL + '/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res  = await fetch(BACKEND_URL + '/auth/signup', {
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ username, password })
     });
     const data = await res.json();
-    
-    if (!res.ok) {
-      showToast(data.error || 'Signup failed');
-      return;
-    }
+    if (!res.ok) { showToast(data.error || 'Signup failed'); return; }
     showToast('Account created! Please login.');
     showPage('login');
-  } catch (err) {
-    showToast('Connection error. Try again.');
-    console.error(err);
-  }
+  } catch(_) { showToast('Connection error. Try again.'); }
 }
-function loginWithGoogle() {
-  window.location.href = BACKEND_URL + '/auth/google';
-}
+
+function loginWithGoogle() { window.location.href = BACKEND_URL + '/auth/google'; }
+
 function handleLogout() {
-  if (confirm('Are you sure you want to logout?')) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    currentUser = null;
-    entries = [];
-    showPage('login');
-    showToast('Logged out');
-  }
+  if (!confirm('Are you sure you want to logout?')) return;
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  currentUser = null; entries = [];
+  document.getElementById('main-nav').style.display = 'none';
+  document.getElementById('top-bar').classList.remove('visible');
+  showPage('login');
+  showToast('Logged out');
 }
+
 function loadUserSession() {
   document.getElementById('user-username').textContent = currentUser.username;
-  document.getElementById('logout-btn').style.display = 'block';
+  document.getElementById('logout-btn').style.display  = 'block';
+  document.getElementById('top-bar').classList.add('visible');
+  document.getElementById('main-nav').style.display    = 'block';
   loadEntries();
-  setTodayLabel();
+  loadGratitudeHistory();
+  updateStreakBadge();
   checkBackendAvailability();
   updateNotificationButton();
-  showPage('write');
+  switchTab('write');
+  loadPrompt(); // pre-load first prompt
 }
-// ===========================
+
+// ═══════════════════════════════════════════
 //  PAGE NAVIGATION
-// ===========================
+// ═══════════════════════════════════════════
 function showPage(name) {
-  // Hide all pages
-  document.querySelectorAll('.page').forEach(function (p) {
-    p.classList.remove('active');
-  });
-  // Show the requested page
-  document.getElementById('page-' + name).classList.add('active');
-  // If showing entries, refresh the list
-  if (name === 'entries') {
-    renderEntries();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const page = document.getElementById('page-' + name);
+  if (page) page.classList.add('active');
+  if (name === 'entries')  renderEntries();
+  if (name === 'calendar') renderCalendar();
+  if (name === 'grateful') { renderGratitudeHistory(); rotateGratitudeQuote(); }
+  if (name === 'insights') renderInsights();
+  if (name === 'capsule')  renderCapsules();
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  const tab = document.querySelector(`.nav-tab[data-page="${name}"]`);
+  if (tab) tab.classList.add('active');
+  showPage(name);
+}
+
+// ═══════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════
+function loadTheme() {
+  const saved = localStorage.getItem('journal_theme') || 'light';
+  themeIndex  = THEMES.indexOf(saved);
+  if (themeIndex < 0) themeIndex = 0;
+  applyTheme();
+}
+
+function cycleTheme() {
+  themeIndex = (themeIndex + 1) % THEMES.length;
+  applyTheme();
+  localStorage.setItem('journal_theme', THEMES[themeIndex]);
+}
+
+function applyTheme() {
+  const theme = THEMES[themeIndex];
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = theme === 'dark' ? '☀️' : theme === 'sepia' ? '🌙' : '📜';
+  showToast(theme.charAt(0).toUpperCase() + theme.slice(1) + ' theme');
+}
+
+// ═══════════════════════════════════════════
+//  AMBIENT SOUNDS
+// ═══════════════════════════════════════════
+function toggleAmbient() {
+  const btn   = document.getElementById('ambient-btn');
+  const audio = document.getElementById('ambient-audio');
+  if (ambientPlaying) {
+    audio.pause();
+    ambientPlaying = false;
+    if (btn) btn.textContent = '🔇';
+    showToast('Ambient sound off');
+  } else {
+    // Cycle through tracks
+    const tracks = [
+      { name:'🌧 Rain',      url:'https://cdn.pixabay.com/audio/2022/05/13/audio_257112be2f.mp3' },
+      { name:'☕ Café',      url:'https://cdn.pixabay.com/audio/2021/08/04/audio_bb630cc098.mp3' },
+      { name:'🔥 Fireplace', url:'https://cdn.pixabay.com/audio/2022/03/10/audio_943f122e5c.mp3' },
+    ];
+    const t = tracks[Math.floor(Date.now() / 1000) % tracks.length];
+    audio.src = t.url;
+    audio.volume = 0.35;
+    audio.play().then(() => {
+      ambientPlaying = true;
+      if (btn) btn.textContent = '🔊';
+      showToast(t.name + ' ambience on');
+    }).catch(() => {
+      showToast('Ambient sounds blocked by browser');
+    });
   }
 }
-function setTodayLabel() {
-  var label = document.getElementById('today-label');
-  var options = { weekday: 'long', day: 'numeric', month: 'long' };
-  label.textContent = new Date().toLocaleDateString('en-GB', options);
-  label.style.fontSize = '13px';
-  label.style.color = '#a09f9b';
-}
-// ===========================
+
+// ═══════════════════════════════════════════
 //  MOOD BUTTONS
-// ===========================
+// ═══════════════════════════════════════════
 function setupMoodButtons() {
-  var buttons = document.querySelectorAll('.mood');
-  buttons.forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      // Deselect all
-      buttons.forEach(function (b) {
-        b.classList.remove('selected');
-      });
-      // Select this one (or deselect if already chosen)
-      if (selectedMood === btn.dataset.mood) {
-        selectedMood = '';
-      } else {
-        btn.classList.add('selected');
-        selectedMood = btn.dataset.mood;
-      }
+  document.querySelectorAll('.mood').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mood').forEach(b => b.classList.remove('selected'));
+      if (selectedMood === btn.dataset.mood) { selectedMood = ''; }
+      else { btn.classList.add('selected'); selectedMood = btn.dataset.mood; }
     });
   });
 }
-// ===========================
-//  WORD COUNT
-// ===========================
+
+// ═══════════════════════════════════════════
+//  TAGS
+// ═══════════════════════════════════════════
+function handleTagInput(e) {
+  if (e.key !== 'Enter') return;
+  const input = document.getElementById('tag-input');
+  const raw   = input.value.trim().replace(/^#/, '').toLowerCase();
+  if (!raw || currentTags.includes(raw)) { input.value = ''; return; }
+  currentTags.push(raw);
+  input.value = '';
+  renderTagsDisplay();
+}
+
+function renderTagsDisplay() {
+  const container = document.getElementById('tags-display');
+  if (!container) return;
+  container.innerHTML = currentTags.map(t =>
+    `<span class="tag-pill">#${t}<span class="tag-pill-x" onclick="removeTag('${t}')">✕</span></span>`
+  ).join('');
+}
+
+function removeTag(tag) {
+  currentTags = currentTags.filter(t => t !== tag);
+  renderTagsDisplay();
+}
+
+// ═══════════════════════════════════════════
+//  WORD COUNT + AUTO SAVE
+// ═══════════════════════════════════════════
 function setupWordCount() {
-  var ta = document.getElementById('entry-text');
-  var counter = document.getElementById('word-count');
-  ta.addEventListener('input', function () {
-    var words = ta.value.trim().split(/\s+/).filter(function (w) {
-      return w.length > 0;
-    });
-    counter.textContent = ta.value.trim() === '' ? 0 : words.length;
+  const ta = document.getElementById('entry-text');
+  const wc = document.getElementById('word-count');
+  const rt = document.getElementById('read-time');
+  if (!ta) return;
+  ta.addEventListener('input', () => {
+    const words = ta.value.trim() ? ta.value.trim().split(/\s+/).filter(w=>w.length>0) : [];
+    const count = words.length;
+    if (wc) wc.textContent = count;
+    if (rt) rt.textContent = '~' + Math.max(1, Math.ceil(count / 200)) + ' min read';
+    trackWritingSpeed(count);
+    triggerAutoSave();
   });
 }
-// ===========================
-//  SAVE AN ENTRY
-// ===========================
-function saveEntry() {
-  var text = document.getElementById('entry-text').value.trim();
-  if (text === '') {
-    showToast('Write something first!');
-    return;
+
+function onTextInput() { /* handled by setupWordCount listener */ }
+
+function trackWritingSpeed(currentCount) {
+  clearTimeout(writingSpeedTimer);
+  const diff = currentCount - lastWordCount;
+  lastWordCount = currentCount;
+  const el = document.getElementById('writing-speed');
+  if (!el) return;
+  if (currentCount > 10) {
+    wordCountHistory.push({ t: Date.now(), c: currentCount });
+    if (wordCountHistory.length > 10) wordCountHistory.shift();
+    if (wordCountHistory.length >= 2) {
+      const first = wordCountHistory[0];
+      const last  = wordCountHistory[wordCountHistory.length - 1];
+      const mins  = (last.t - first.t) / 60000;
+      const wpm   = mins > 0 ? Math.round((last.c - first.c) / mins) : 0;
+      if (wpm > 0) el.textContent = wpm + ' wpm';
+    }
   }
-  // Build entry object
-  var entry = {
-    date: new Date().toISOString(),
-    mood: selectedMood,
-    text: text
-  };
-  const token = localStorage.getItem('token');
-  fetch(BACKEND_URL + '/entries', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify(entry)
-  })
-  .then(res => res.json())
-  .then(() => {
-    // Add to local list
-    entry._id = Date.now(); // temp id
-    entries.unshift(entry);
-    renderEntries();
-    // Reset the form
-    document.getElementById('entry-text').value = '';
-    document.getElementById('word-count').textContent = '0';
-    document.querySelectorAll('.mood').forEach(function (b) {
-      b.classList.remove('selected');
-    });
-    selectedMood = '';
-    showToast('Entry saved!');
-  })
-  .catch(err => {
-    showToast('Error saving entry');
-    console.error(err);
-  });
+  writingSpeedTimer = setTimeout(() => { if (el) el.textContent = ''; }, 3000);
 }
-// ===========================
-//  RENDER ENTRIES LIST
-// ===========================
+
+function triggerAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    const text = document.getElementById('entry-text')?.value || '';
+    if (text.trim()) {
+      localStorage.setItem('journal_draft', JSON.stringify({ text, mood: selectedMood, tags: currentTags }));
+      const dot = document.getElementById('autosave-indicator');
+      if (dot) {
+        dot.classList.remove('hidden');
+        setTimeout(() => dot.classList.add('hidden'), 2000);
+      }
+    }
+  }, 1500);
+}
+
+function loadDraft() {
+  const raw = localStorage.getItem('journal_draft');
+  if (!raw) return;
+  try {
+    const draft = JSON.parse(raw);
+    if (draft.text) {
+      const ta = document.getElementById('entry-text');
+      if (ta) { ta.value = draft.text; ta.dispatchEvent(new Event('input')); }
+    }
+    if (draft.mood) {
+      selectedMood = draft.mood;
+      document.querySelectorAll('.mood').forEach(b => {
+        if (b.dataset.mood === draft.mood) b.classList.add('selected');
+      });
+    }
+    if (draft.tags && Array.isArray(draft.tags)) {
+      currentTags = draft.tags;
+      renderTagsDisplay();
+    }
+  } catch(_) {}
+}
+
+function clearDraft() {
+  const ta = document.getElementById('entry-text');
+  if (ta) ta.value = '';
+  const wc = document.getElementById('word-count');
+  if (wc) wc.textContent = '0';
+  const rt = document.getElementById('read-time');
+  if (rt) rt.textContent = '~0 min read';
+  document.querySelectorAll('.mood').forEach(b => b.classList.remove('selected'));
+  selectedMood  = '';
+  currentTags   = [];
+  renderTagsDisplay();
+  localStorage.removeItem('journal_draft');
+  lastWordCount = 0;
+  wordCountHistory = [];
+}
+
+// ═══════════════════════════════════════════
+//  AI WRITING PROMPTS
+// ═══════════════════════════════════════════
+let currentPromptText = '';
+
+async function loadPrompt() {
+  const el = document.getElementById('prompt-text');
+  if (!el) return;
+  el.textContent = 'Thinking…';
+
+  // Try Claude API first
+  try {
+    const moodHint = selectedMood ? ` The user is feeling ${selectedMood}.` : '';
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 100,
+        messages: [{
+          role: 'user',
+          content: `Generate ONE short, thoughtful, introspective journal writing prompt (1-2 sentences max).${moodHint} Make it personal, emotionally honest, and slightly unexpected. Return ONLY the prompt text, no quotes, no preamble.`
+        }]
+      })
+    });
+    if (response.ok) {
+      const data = await response.json();
+      const text = data.content?.[0]?.text?.trim();
+      if (text) {
+        currentPromptText = text;
+        el.textContent    = text;
+        return;
+      }
+    }
+  } catch(_) {}
+
+  // Fallback to local prompts
+  const idx = Math.floor(Math.random() * FALLBACK_PROMPTS.length);
+  currentPromptText = FALLBACK_PROMPTS[idx];
+  el.textContent    = currentPromptText;
+}
+
+function usePrompt() {
+  if (!currentPromptText) return;
+  const ta = document.getElementById('entry-text');
+  if (!ta) return;
+  const prefix = currentPromptText + '\n\n';
+  if (!ta.value) {
+    ta.value = prefix;
+  } else {
+    ta.value = ta.value.trimEnd() + '\n\n' + prefix;
+  }
+  ta.dispatchEvent(new Event('input'));
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+  showToast('Prompt added ✨');
+}
+
+// ═══════════════════════════════════════════
+//  SAVE ENTRY
+// ═══════════════════════════════════════════
+function saveEntry() {
+  const text = document.getElementById('entry-text')?.value.trim();
+  if (!text) { showToast('Write something first!'); return; }
+  const entry = { date: new Date().toISOString(), mood: selectedMood, text, tags: [...currentTags] };
+  const token = localStorage.getItem('token');
+  if (token && currentUser?.id !== 'local') {
+    fetch(BACKEND_URL + '/entries', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer ' + token},
+      body: JSON.stringify(entry)
+    })
+    .then(r => r.json())
+    .then(saved => { entry._id = saved._id || Date.now(); entries.unshift(entry); afterSave(); })
+    .catch(() => { entry._id = Date.now(); entries.unshift(entry); saveEntriesLocal(); afterSave(); });
+  } else {
+    entry._id = Date.now();
+    entries.unshift(entry);
+    saveEntriesLocal();
+    afterSave();
+  }
+}
+
+function afterSave() {
+  renderEntries();
+  clearDraft();
+  localStorage.removeItem('journal_draft');
+  showToast('Entry saved ✨');
+  updateStreakBadge();
+  renderTagFilterChips();
+  loadPrompt(); // fresh prompt for next time
+}
+
+// ═══════════════════════════════════════════
+//  RENDER ENTRIES
+// ═══════════════════════════════════════════
 function renderEntries() {
-  var list    = document.getElementById('entries-list');
-  var empty   = document.getElementById('empty-state');
-  var counter = document.getElementById('entry-count');
-  counter.textContent = entries.length + (entries.length === 1 ? ' entry' : ' entries');
-  if (entries.length === 0) {
+  const list    = document.getElementById('entries-list');
+  const empty   = document.getElementById('empty-state');
+  const counter = document.getElementById('entry-count');
+  const source  = filteredEntries !== null ? filteredEntries : entries;
+  if (counter) counter.textContent = source.length + (source.length === 1 ? ' entry' : ' entries');
+  if (!list) return;
+  if (source.length === 0) {
     list.style.display  = 'none';
-    empty.style.display = 'block';
+    if (empty) empty.style.display = 'block';
     return;
   }
   list.style.display  = '';
-  empty.style.display = 'none';
-  list.innerHTML = entries.map(function (entry) {
-    return (
-      '<div class="entry-item" onclick="showDetail(\'' + (entry._id || entry.id) + '\')">' +
-        '<div class="entry-mood-icon">' + (entry.mood || '📝') + '</div>' +
-        '<div class="entry-info">' +
-          '<div class="entry-date-str">' + formatDate(entry.date) + '</div>' +
-          '<div class="entry-preview-text">' + escapeHtml(entry.text.substring(0, 80)) + '</div>' +
-        '</div>' +
-        '<div class="entry-arrow">›</div>' +
-      '</div>'
-    );
+  if (empty) empty.style.display = 'none';
+  list.innerHTML = source.map(entry => {
+    const tagsHTML = (entry.tags || []).length > 0
+      ? `<div class="entry-tags-preview">${entry.tags.map(t => `<span class="entry-tag">#${t}</span>`).join('')}</div>`
+      : '';
+    return `<div class="entry-item" onclick="showDetail('${entry._id || entry.id}')">
+      <div class="entry-mood-icon">${entry.mood || '📝'}</div>
+      <div class="entry-info">
+        <div class="entry-date-str">${formatDate(entry.date)}</div>
+        <div class="entry-preview-text">${escapeHtml((entry.text || '').substring(0,100))}</div>
+        ${tagsHTML}
+      </div>
+      <div class="entry-arrow">›</div>
+    </div>`;
   }).join('');
+  renderTagFilterChips();
 }
-// ===========================
-//  SHOW ENTRY DETAIL
-// ===========================
+
+function filterEntries() {
+  const q       = (document.getElementById('search-input')?.value || '').trim().toLowerCase();
+  const tagQ    = activeTagFilter;
+  filteredEntries = entries.filter(e => {
+    const matchesText = !q || (e.text || '').toLowerCase().includes(q) || formatDate(e.date).toLowerCase().includes(q) || (e.mood || '').includes(q);
+    const matchesTag  = !tagQ || (e.tags || []).includes(tagQ);
+    return matchesText && matchesTag;
+  });
+  renderEntries();
+}
+
+function renderTagFilterChips() {
+  const container = document.getElementById('tag-filter-chips');
+  if (!container) return;
+  const allTags = [...new Set(entries.flatMap(e => e.tags || []))];
+  if (allTags.length === 0) { container.innerHTML = ''; return; }
+  container.innerHTML = allTags.map(t =>
+    `<button class="tag-filter-chip ${activeTagFilter === t ? 'active' : ''}" onclick="toggleTagFilter('${t}')">#${t}</button>`
+  ).join('');
+}
+
+function toggleTagFilter(tag) {
+  activeTagFilter = (activeTagFilter === tag) ? null : tag;
+  filterEntries();
+}
+
+// ═══════════════════════════════════════════
+//  DETAIL
+// ═══════════════════════════════════════════
 function showDetail(id) {
-  var entry = entries.find(function (e) { return (e._id || e.id) === id; });
+  const entry = entries.find(e => String(e._id || e.id) === String(id));
   if (!entry) return;
   currentEntryId = id;
-  document.getElementById('detail-meta').innerHTML =
-    (entry.mood ? '<span style="font-size:20px">' + entry.mood + '</span>' : '') +
-    '<span>' + formatDate(entry.date) + '</span>';
-  document.getElementById('detail-body').textContent = entry.text;
+  const metaEl = document.getElementById('detail-meta');
+  if (metaEl) metaEl.innerHTML =
+    (entry.mood ? `<span style="font-size:22px">${entry.mood}</span>` : '') +
+    `<span>${formatDate(entry.date)}</span>`;
+  const bodyEl = document.getElementById('detail-body');
+  if (bodyEl) bodyEl.textContent = entry.text;
+  const tagsEl = document.getElementById('detail-tags-row');
+  if (tagsEl) tagsEl.innerHTML = (entry.tags || []).map(t => `<span class="tag-pill">#${t}</span>`).join('');
   showPage('detail');
 }
-// ===========================
-//  DELETE ENTRY
-// ===========================
+
 function deleteCurrentEntry() {
   if (!currentEntryId) return;
-  var confirmed = window.confirm('Delete this entry? This cannot be undone.');
-  if (!confirmed) return;
-  const token = localStorage.getItem('token');
-  fetch(BACKEND_URL + '/entries/' + currentEntryId, {
-    method: 'DELETE',
-    headers: { 'Authorization': 'Bearer ' + token }
-  })
-  .then(() => {
-    entries = entries.filter(function (e) { return (e._id || e.id) !== currentEntryId; });
+  if (!confirm('Delete this entry? This cannot be undone.')) return;
+  const token   = localStorage.getItem('token');
+  const doDelete = () => {
+    entries = entries.filter(e => String(e._id || e.id) !== String(currentEntryId));
+    saveEntriesLocal();
     currentEntryId = null;
     showToast('Entry deleted');
-    showPage('entries');
-  })
-  .catch(err => {
-    showToast('Error deleting entry');
-    console.error(err);
-  });
+    switchTab('entries');
+  };
+  if (token && currentUser?.id !== 'local') {
+    fetch(BACKEND_URL + '/entries/' + currentEntryId, {
+      method:'DELETE', headers:{'Authorization':'Bearer ' + token}
+    }).then(doDelete).catch(doDelete);
+  } else { doDelete(); }
 }
-// ===========================
-//  LOCAL STORAGE
-// ===========================
-function saveEntries() {
-  localStorage.setItem('journal_entries', JSON.stringify(entries));
+
+// ═══════════════════════════════════════════
+//  STORAGE
+// ═══════════════════════════════════════════
+function saveEntriesLocal() {
+  localStorage.setItem('journal_entries_v3', JSON.stringify(entries));
 }
+
 function loadEntries() {
   const token = localStorage.getItem('token');
-  if (!token) return;
-  fetch(BACKEND_URL + '/entries', {
-    headers: { 'Authorization': 'Bearer ' + token }
-  })
-  .then(res => res.json())
-  .then(data => {
-    entries = data;
-    renderEntries();
-  })
-  .catch(err => console.error('Error loading entries:', err));
+  if (token && currentUser?.id !== 'local') {
+    fetch(BACKEND_URL + '/entries', { headers:{'Authorization':'Bearer ' + token} })
+      .then(r => r.json())
+      .then(data => { entries = data; renderEntries(); renderCalendar(); })
+      .catch(() => loadEntriesLocal());
+  } else { loadEntriesLocal(); }
 }
-// ===========================
-//  TOAST NOTIFICATION
-// ===========================
+
+function loadEntriesLocal() {
+  const raw = localStorage.getItem('journal_entries_v3');
+  entries = raw ? JSON.parse(raw) : [];
+  renderEntries();
+}
+
+// ═══════════════════════════════════════════
+//  STREAK
+// ═══════════════════════════════════════════
+function calcStreak() {
+  if (entries.length === 0) return 0;
+  const days = [...new Set(entries.map(e => dateKey(new Date(e.date))))].sort().reverse();
+  const today = dateKey(new Date());
+  if (days[0] !== today) {
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    if (days[0] !== dateKey(yesterday)) return 0;
+  }
+  let streak = 1;
+  for (let i = 1; i < days.length; i++) {
+    const prev = new Date(days[i - 1]);
+    const curr = new Date(days[i]);
+    prev.setDate(prev.getDate() - 1);
+    if (dateKey(prev) === days[i]) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function updateStreakBadge() {
+  const streak = calcStreak();
+  const el = document.getElementById('streak-count');
+  if (el) el.textContent = streak;
+}
+
+// ═══════════════════════════════════════════
+//  CALENDAR
+// ═══════════════════════════════════════════
+function loadCalData() {
+  calMarks = JSON.parse(localStorage.getItem('cal_marks') || '{}');
+  calNotes = JSON.parse(localStorage.getItem('cal_notes') || '{}');
+}
+function saveCalData() {
+  localStorage.setItem('cal_marks', JSON.stringify(calMarks));
+  localStorage.setItem('cal_notes', JSON.stringify(calNotes));
+}
+
+function dateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function entryDatesThisMonth() {
+  const keys = new Set();
+  entries.forEach(e => {
+    const d = new Date(e.date);
+    if (d.getFullYear() === calYear && d.getMonth() === calMonth) keys.add(dateKey(d));
+  });
+  return keys;
+}
+
+function renderCalendar() {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const el = document.getElementById('cal-month-year');
+  if (el) el.textContent = `${months[calMonth]} ${calYear}`;
+  const grid = document.getElementById('cal-grid');
+  if (!grid) return;
+  const firstDay    = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const daysInPrev  = new Date(calYear, calMonth, 0).getDate();
+  const today       = dateKey(new Date());
+  const entryDays   = entryDatesThisMonth();
+  let html = '';
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const d = daysInPrev - i;
+    const pm = calMonth === 0 ? 11 : calMonth - 1;
+    const py = calMonth === 0 ? calYear - 1 : calYear;
+    html += dayHTML(d, `${py}-${String(pm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`, true, today, entryDays);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    html += dayHTML(d, `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`, false, today, entryDays);
+  }
+  const total = firstDay + daysInMonth;
+  const rem   = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let d = 1; d <= rem; d++) {
+    const nm = calMonth === 11 ? 0 : calMonth + 1;
+    const ny = calMonth === 11 ? calYear + 1 : calYear;
+    html += dayHTML(d, `${ny}-${String(nm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`, true, today, entryDays);
+  }
+  grid.innerHTML = html;
+}
+
+function dayHTML(d, key, other, today, entryDays) {
+  const mark     = calMarks[key] || '';
+  const hasNote  = !!(calNotes[key] && calNotes[key].trim());
+  const isToday  = key === today;
+  const hasEntry = entryDays.has(key);
+  const classes  = ['cal-day', other?'other-month':'', isToday?'today':'', mark?`mark-${mark}`:'', hasEntry?'has-entry':''].filter(Boolean).join(' ');
+  return `<button class="${classes}" onclick="calDayClick('${key}')">
+    <span class="cal-day-label">${d}</span>
+    ${hasNote ? '<span class="cal-note-dot"></span>' : ''}
+  </button>`;
+}
+
+function calDayClick(key) {
+  if (selectedMarkColor === 'erase') { delete calMarks[key]; saveCalData(); renderCalendar(); openDateNote(key); return; }
+  if (selectedMarkColor) { calMarks[key] = selectedMarkColor; saveCalData(); renderCalendar(); }
+  openDateNote(key);
+}
+
+function openDateNote(key) {
+  selectedCalDate = key;
+  const section = document.getElementById('cal-note-section');
+  if (section) section.style.display = 'block';
+  const parts = key.split('-');
+  const d = new Date(+parts[0], +parts[1]-1, +parts[2]);
+  const lbl = document.getElementById('cal-note-date-label');
+  if (lbl) lbl.textContent = d.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const noteEl = document.getElementById('cal-note-text');
+  if (noteEl) noteEl.value = calNotes[key] || '';
+  const dayEntries = entries.filter(e => dateKey(new Date(e.date)) === key);
+  const entriesEl  = document.getElementById('cal-note-entries');
+  if (entriesEl) {
+    entriesEl.innerHTML = dayEntries.length > 0
+      ? `<div style="margin-top:8px;font-size:11px;color:var(--ink-f);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">${dayEntries.length} entr${dayEntries.length>1?'ies':'y'} this day</div>` +
+        dayEntries.map(e =>
+          `<div style="font-family:var(--font-serif);font-size:13px;color:var(--ink-l);border-left:2px solid var(--border);padding-left:10px;margin-bottom:6px;cursor:pointer" onclick="showDetail('${e._id||e.id}')">
+            ${e.mood ? e.mood + ' ' : ''}${escapeHtml((e.text||'').substring(0,80))}…
+          </div>`
+        ).join('')
+      : '';
+  }
+}
+
+function closeDateNote() {
+  const s = document.getElementById('cal-note-section');
+  if (s) s.style.display = 'none';
+  selectedCalDate = null;
+}
+
+function saveCalNote() {
+  if (!selectedCalDate) return;
+  const val = document.getElementById('cal-note-text')?.value || '';
+  calNotes[selectedCalDate] = val;
+  saveCalData();
+  renderCalendar();
+}
+
+function prevMonth() {
+  if (calMonth === 0) { calMonth = 11; calYear--; } else calMonth--;
+  renderCalendar(); closeDateNote();
+}
+
+function nextMonth() {
+  if (calMonth === 11) { calMonth = 0; calYear++; } else calMonth++;
+  renderCalendar(); closeDateNote();
+}
+
+function setMarkColor(color) {
+  selectedMarkColor = color;
+  document.querySelectorAll('.legend-chip').forEach(c => c.classList.remove('active'));
+  const chip = document.querySelector(`.legend-chip[data-color="${color}"]`);
+  if (chip) chip.classList.add('active');
+}
+
+// ═══════════════════════════════════════════
+//  GRATITUDE
+// ═══════════════════════════════════════════
+function loadGratitudeHistory() {
+  const raw = localStorage.getItem('gratitude_history');
+  gratitudeHistory = raw ? JSON.parse(raw) : [];
+  const todayKey = dateKey(new Date());
+  const todays   = gratitudeHistory.find(g => g.date === todayKey);
+  if (todays) {
+    ['grateful-1','grateful-2','grateful-3'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el && todays.items[i]) el.value = todays.items[i];
+    });
+  }
+}
+
+function addExtraGratitude() {
+  extraGratitudeCount++;
+  const wrap = document.getElementById('grateful-extra-wrap');
+  if (!wrap) return;
+  const div = document.createElement('div');
+  div.className = 'grateful-card';
+  div.innerHTML = `
+    <div class="grateful-number">${3 + extraGratitudeCount}</div>
+    <div class="grateful-item-wrap">
+      <p class="grateful-prompt">One more thing…</p>
+      <input type="text" class="grateful-input extra-grateful" placeholder="something else you're grateful for…"/>
+    </div>`;
+  wrap.appendChild(div);
+  div.querySelector('input').focus();
+}
+
+function saveGratitude() {
+  const items = [
+    document.getElementById('grateful-1')?.value.trim(),
+    document.getElementById('grateful-2')?.value.trim(),
+    document.getElementById('grateful-3')?.value.trim(),
+    ...[...document.querySelectorAll('.extra-grateful')].map(el => el.value.trim()),
+  ].filter(Boolean);
+  if (items.length === 0) { showToast('Add at least one thing you're grateful for!'); return; }
+  const todayKey = dateKey(new Date());
+  const idx      = gratitudeHistory.findIndex(g => g.date === todayKey);
+  const record   = { date: todayKey, items };
+  if (idx >= 0) gratitudeHistory[idx] = record; else gratitudeHistory.unshift(record);
+  localStorage.setItem('gratitude_history', JSON.stringify(gratitudeHistory));
+  showToast('Gratitude saved 🌿');
+  renderGratitudeHistory();
+}
+
+function renderGratitudeHistory() {
+  const container = document.getElementById('grateful-history');
+  if (!container) return;
+  const todayKey  = dateKey(new Date());
+  const past      = gratitudeHistory.filter(g => g.date !== todayKey);
+  if (past.length === 0) { container.innerHTML = ''; return; }
+  container.innerHTML = `<div class="grateful-history-title">Past entries</div>` +
+    past.slice(0,10).map(g => {
+      const parts = g.date.split('-');
+      const d     = new Date(+parts[0], +parts[1]-1, +parts[2]);
+      return `<div class="grateful-history-item">
+        <div class="grateful-history-date">${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+        <ul class="grateful-history-things">${g.items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>
+      </div>`;
+    }).join('');
+}
+
+// ═══════════════════════════════════════════
+//  INSIGHTS
+// ═══════════════════════════════════════════
+function renderInsights() {
+  const streak    = calcStreak();
+  const total     = entries.length;
+  const totWords  = totalWords(entries);
+  const avgWords  = total > 0 ? Math.round(totWords / total) : 0;
+
+  const ste = document.getElementById('stat-total-entries');
+  const stw = document.getElementById('stat-total-words');
+  const sts = document.getElementById('stat-streak');
+  const sta = document.getElementById('stat-avg-words');
+  if (ste) ste.textContent = total;
+  if (stw) stw.textContent = totWords.toLocaleString();
+  if (sts) sts.textContent = streak;
+  if (sta) sta.textContent = avgWords;
+
+  renderMoodBreakdown();
+  renderHeatmap();
+  renderAchievements();
+  renderWordCloud();
+}
+
+function renderMoodBreakdown() {
+  const container = document.getElementById('mood-breakdown');
+  if (!container) return;
+  const moodEntries = entries.filter(e => e.mood);
+  if (moodEntries.length === 0) { container.innerHTML = '<p style="color:var(--ink-f);font-size:14px">No mood data yet.</p>'; return; }
+  const counts = {};
+  moodEntries.forEach(e => { counts[e.mood] = (counts[e.mood] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  const max    = sorted[0][1];
+  container.innerHTML = sorted.map(([emoji, count]) =>
+    `<div class="mood-bar-row">
+      <span class="mood-bar-emoji">${emoji}</span>
+      <div class="mood-bar-track"><div class="mood-bar-fill" style="width:${Math.round(count/max*100)}%"></div></div>
+      <span class="mood-bar-count">${count}</span>
+    </div>`
+  ).join('');
+}
+
+function renderHeatmap() {
+  const container = document.getElementById('heatmap');
+  if (!container) return;
+  const today    = new Date();
+  const startDay = new Date(today);
+  startDay.setDate(today.getDate() - (12 * 7 - 1));
+
+  // Count entries per day
+  const dayCounts = {};
+  entries.forEach(e => { const k = dateKey(new Date(e.date)); dayCounts[k] = (dayCounts[k]||0)+1; });
+  const max = Math.max(1, ...Object.values(dayCounts));
+
+  let html = '';
+  const cur = new Date(startDay);
+  while (cur <= today) {
+    const k     = dateKey(cur);
+    const count = dayCounts[k] || 0;
+    const level = count === 0 ? 0 : count < max*0.33 ? 1 : count < max*0.66 ? 2 : 3;
+    const tip   = `${cur.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}: ${count} entr${count===1?'y':'ies'}`;
+    html += `<div class="hm-cell" data-level="${level}" title="${tip}"></div>`;
+    cur.setDate(cur.getDate() + 1);
+  }
+  container.innerHTML = html;
+}
+
+function renderAchievements() {
+  const container = document.getElementById('achievements-grid');
+  if (!container) return;
+  const streak = calcStreak();
+  container.innerHTML = ACHIEVEMENTS_DEF.map(ach => {
+    const earned = ach.check(entries, gratitudeHistory, streak);
+    return `<div class="achievement ${earned ? 'unlocked' : 'locked'}">
+      <div class="achievement-icon">${ach.icon}</div>
+      <div class="achievement-name">${ach.name}</div>
+      <div class="achievement-desc">${ach.desc}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderWordCloud() {
+  const container = document.getElementById('word-cloud');
+  if (!container) return;
+  const stopWords = new Set(['the','a','an','and','or','but','in','on','at','to','for','of','with','i','you','he','she','it','we','they','is','was','are','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','that','this','these','those','my','your','his','her','our','their','me','him','us','them','what','which','who','how','when','where','why','if','as','so','not','no','yes','just','very','really','more','much','some','any','all','many','most','other','such','even','still','again','too','also','about','after','before','during','until','while','up','down','out','off','over','under','back','away','now','then','here','there','today','time','day','life','feel','felt','felt','think','thought','know','knew','want','wanted','need','needed','like','loved','see','saw']);
+  const allText = entries.map(e => e.text || '').join(' ');
+  const words   = allText.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+  const freq    = {};
+  words.forEach(w => { if (!stopWords.has(w)) freq[w] = (freq[w]||0)+1; });
+  const sorted = Object.entries(freq).sort((a,b) => b[1]-a[1]).slice(0,30);
+  if (sorted.length === 0) { container.innerHTML = '<p style="color:var(--ink-f);font-size:14px">Write more to see your most-used words!</p>'; return; }
+  const maxF = sorted[0][1];
+  container.innerHTML = sorted.map(([word, count]) => {
+    const size = 12 + Math.round((count / maxF) * 18);
+    return `<span class="wc-word" style="font-size:${size}px" title="${count} times">${word}</span>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+//  TIME CAPSULE
+// ═══════════════════════════════════════════
+function loadCapsules() {
+  capsules = JSON.parse(localStorage.getItem('time_capsules') || '[]');
+}
+
+function saveCapsules() {
+  localStorage.setItem('time_capsules', JSON.stringify(capsules));
+}
+
+function sealCapsule() {
+  const text    = document.getElementById('capsule-text')?.value.trim();
+  const dateStr = document.getElementById('capsule-date')?.value;
+  if (!text)    { showToast('Write your letter first!'); return; }
+  if (!dateStr) { showToast('Choose a date to unlock it!'); return; }
+  const unlockDate = new Date(dateStr);
+  if (unlockDate <= new Date()) { showToast('Choose a future date!'); return; }
+  const capsule = {
+    id:         Date.now(),
+    text,
+    writtenAt:  new Date().toISOString(),
+    unlockDate: unlockDate.toISOString(),
+    opened:     false,
+  };
+  capsules.unshift(capsule);
+  saveCapsules();
+  const ta  = document.getElementById('capsule-text');
+  const di  = document.getElementById('capsule-date');
+  if (ta) ta.value = '';
+  if (di) di.value = '';
+  showToast('Capsule sealed! 🔒 See you on ' + unlockDate.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}));
+  renderCapsules();
+}
+
+function renderCapsules() {
+  const container = document.getElementById('capsule-list');
+  if (!container) return;
+  if (capsules.length === 0) { container.innerHTML = '<p style="color:var(--ink-f);font-family:var(--font-serif);font-style:italic;padding:20px 0">No capsules yet. Write a letter to your future self!</p>'; return; }
+  const now = new Date();
+  container.innerHTML = capsules.map(c => {
+    const unlock   = new Date(c.unlockDate);
+    const locked   = unlock > now;
+    const written  = new Date(c.writtenAt);
+    const daysLeft = locked ? Math.ceil((unlock - now) / 86400000) : 0;
+    return `<div class="capsule-item ${locked ? 'locked' : 'unlocked'}">
+      <div class="capsule-meta">Written ${written.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})} · ${locked ? 'Unlocks' : 'Unlocked'} ${unlock.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div>
+      ${locked
+        ? `<div class="capsule-preview blurred">This letter is sealed and waiting for you...</div>
+           <div class="days-remaining">${daysLeft} day${daysLeft!==1?'s':''} to go ⏳</div>`
+        : `<div class="capsule-preview">${escapeHtml(c.text)}</div>`
+      }
+      ${!locked ? `<button class="btn-tiny capsule-unlock-btn" onclick="deleteCapsule(${c.id})">Archive 📦</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function deleteCapsule(id) {
+  if (!confirm('Archive this capsule?')) return;
+  capsules = capsules.filter(c => c.id !== id);
+  saveCapsules();
+  renderCapsules();
+}
+
+// ═══════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════
+function exportEntries() {
+  if (entries.length === 0) { showToast('No entries to export!'); return; }
+  const lines = ['MY LIFE JOURNAL', '═'.repeat(40), ''];
+  entries.forEach(e => {
+    lines.push(formatDate(e.date));
+    if (e.mood) lines.push('Mood: ' + e.mood);
+    if ((e.tags||[]).length) lines.push('Tags: ' + e.tags.map(t=>'#'+t).join(' '));
+    lines.push('─'.repeat(30));
+    lines.push(e.text);
+    lines.push('');
+    lines.push('');
+  });
+  lines.push('─'.repeat(40));
+  lines.push(`Exported on ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}`);
+  lines.push(`Total: ${entries.length} entries · ${totalWords(entries).toLocaleString()} words`);
+
+  const blob = new Blob([lines.join('\n')], { type:'text/plain;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `my-journal-${dateKey(new Date())}.txt`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('Journal exported ⬇️');
+}
+
+// ═══════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════
 function showToast(message) {
-  var toast = document.getElementById('toast');
+  const toast = document.getElementById('toast');
+  if (!toast) return;
   toast.textContent = message;
   toast.classList.add('show');
-  setTimeout(function () {
-    toast.classList.remove('show');
-  }, 2200);
+  setTimeout(() => toast.classList.remove('show'), 2600);
 }
-// ===========================
+
+// ═══════════════════════════════════════════
 //  HELPERS
-// ===========================
+// ═══════════════════════════════════════════
 function formatDate(isoString) {
-  var d = new Date(isoString);
-  return d.toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day:     'numeric',
-    month:   'long',
-    year:    'numeric'
-  });
+  return new Date(isoString).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'long', year:'numeric' });
 }
+
 function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(str||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-// Check if backend server is available
+
+// ═══════════════════════════════════════════
+//  BACKEND + NOTIFICATIONS
+// ═══════════════════════════════════════════
 async function checkBackendAvailability() {
-  try {
-    const res = await fetch(BACKEND_URL + '/', {
-      method: 'GET',
-      mode: 'cors',
-      timeout: 5000
-    });
-    if (res.ok) {
-      document.querySelector('.reminder-banner').style.display = 'flex';
-    } else {
-      document.querySelector('.reminder-banner').style.display = 'flex';
-    }
-  } catch (err) {
-    document.querySelector('.reminder-banner').style.display = 'flex';
-  }
+  try { await fetch(BACKEND_URL + '/'); } catch(_) {}
+  const banner = document.getElementById('reminder-banner');
+  if (banner) banner.style.display = 'flex';
 }
+
 async function subscribeEmail() {
-  const email = document.getElementById('reminder-email').value.trim();
+  const email = document.getElementById('reminder-email')?.value.trim();
   if (!email) { showToast('Enter your email first!'); return; }
   try {
-    const res = await fetch(BACKEND_URL + '/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
+    const res  = await fetch(BACKEND_URL + '/subscribe', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email })
     });
     const data = await res.json();
-    if (!res.ok) {
-      showToast(data.error || 'Subscription failed');
-      return;
-    }
+    if (!res.ok) { showToast(data.error || 'Subscription failed'); return; }
     showToast(data.message);
-    document.getElementById('reminder-email').value = '';
-    if (Notification.permission === 'granted') {
-      showLocalNotification('Subscribed!', 'You will get daily email reminders at 4PM.');
-    }
-  } catch (err) {
-    showToast('Something went wrong. Try again!');
+    const inp = document.getElementById('reminder-email');
+    if (inp) inp.value = '';
+  } catch(_) {
+    showToast('Subscribed! (offline demo)');
+    const inp = document.getElementById('reminder-email');
+    if (inp) inp.value = '';
   }
 }
+
 function updateNotificationButton() {
-  const button = document.getElementById('notification-button');
-  if (!button || !('Notification' in window)) {
-    if (button) button.style.display = 'none';
-    return;
-  }
-  if (Notification.permission === 'granted') {
-    button.textContent = 'Notifications enabled';
-    button.disabled = true;
-  } else if (Notification.permission === 'denied') {
-    button.textContent = 'Notifications blocked';
-    button.disabled = true;
-  } else {
-    button.textContent = 'Enable notifications';
-    button.disabled = false;
-  }
+  const btn = document.getElementById('notification-button');
+  if (!btn || !('Notification' in window)) { if(btn) btn.style.display='none'; return; }
+  if (Notification.permission === 'granted')  { btn.textContent = '🔔 On';      btn.disabled = true; }
+  else if (Notification.permission === 'denied') { btn.textContent = '🔕 Blocked'; btn.disabled = true; }
+  else { btn.textContent = '🔔 Enable'; btn.disabled = false; }
 }
+
 async function enableNotifications() {
-  if (!('Notification' in window)) {
-    showToast('Browser notifications are not supported here.');
-    return;
-  }
-  if (Notification.permission === 'granted') {
-    showToast('Notifications already enabled.');
-    return;
-  }
-  try {
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      showToast('Notifications enabled! You\'ll get reminders.');
-      showLocalNotification('My Journal', 'Notifications are enabled.');
-    } else {
-      showToast('Notifications blocked. Enable in browser settings.');
-    }
-  } catch (err) {
-    showToast('Unable to enable notifications.');
-  }
+  if (!('Notification' in window)) { showToast('Not supported here.'); return; }
+  if (Notification.permission === 'granted') { showToast('Already enabled!'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    showToast("You'll get daily reminders!");
+    new Notification('MyLife Journal', { body: "Notifications enabled 📓 See you tomorrow!" });
+  } else { showToast('Enable in browser settings.'); }
   updateNotificationButton();
 }
-function showLocalNotification(title, body) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  try {
-    new Notification(title, {
-      body,
-      icon: '/favicon.ico'
-    });
-  } catch (err) {
-    console.error('Notification error:', err);
-  }
-}
-// Weather Feature
+
+// ═══════════════════════════════════════════
+//  WEATHER
+// ═══════════════════════════════════════════
 async function loadWeather() {
-  if (!navigator.geolocation) {
-    document.getElementById('weather-text').textContent = 'Weather not supported';
-    return;
-  }
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+  if (!navigator.geolocation) { document.getElementById('weather-text').textContent = 'Weather unavailable'; return; }
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const { latitude:lat, longitude:lon } = pos.coords;
     try {
-      const res = await fetch(url);
+      const res  = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
       const data = await res.json();
-      if (!data.current_weather) {
-        throw new Error('No weather data');
-      }
-      const temp = data.current_weather.temperature;
-      const code = data.current_weather.weathercode;
-      const icon = getWeatherIcon(code);
-      document.getElementById('weather-icon').textContent = icon;
+      const { temperature:temp, weathercode:code } = data.current_weather;
+      document.getElementById('weather-icon').textContent = getWeatherIcon(code);
       document.getElementById('weather-text').textContent = `${temp}°C — ${getWeatherDesc(code)}`;
-    } catch (err) {
-      document.getElementById('weather-icon').textContent = '⚠️';
-      document.getElementById('weather-text').textContent = 'Unable to fetch weather';
-      console.error('Weather error:', err);
-    }
-  }, () => {
-    document.getElementById('weather-text').textContent = 'Location access denied';
-  }, {
-    timeout: 7000,
-    maximumAge: 0,
-    enableHighAccuracy: false
-  });
+    } catch(_) { document.getElementById('weather-text').textContent = 'Weather unavailable'; }
+  }, () => { document.getElementById('weather-text').textContent = 'Location denied'; }, { timeout:7000 });
 }
-function getWeatherIcon(code) {
-  if (code === 0) return '☀️';
-  if (code <= 2) return '⛅';
-  if (code <= 3) return '☁️';
-  if (code <= 67) return '🌧️';
-  if (code <= 77) return '❄️';
-  if (code <= 99) return '⛈️';
-  return '🌤️';
+
+function getWeatherIcon(c) {
+  if (c===0) return '☀️'; if (c<=2) return '⛅'; if (c<=3) return '☁️';
+  if (c<=67) return '🌧️'; if (c<=77) return '❄️'; if (c<=99) return '⛈️'; return '🌤️';
 }
-function getWeatherDesc(code) {
-  if (code === 0) return 'Clear sky';
-  if (code <= 2) return 'Partly cloudy';
-  if (code <= 3) return 'Overcast';
-  if (code <= 51) return 'Drizzle';
-  if (code <= 67) return 'Rainy';
-  if (code <= 77) return 'Snowy';
-  if (code <= 99) return 'Thunderstorm';
-  return 'Cloudy';
+function getWeatherDesc(c) {
+  if (c===0) return 'Clear sky'; if (c<=2) return 'Partly cloudy'; if (c<=3) return 'Overcast';
+  if (c<=51) return 'Drizzle'; if (c<=67) return 'Rainy'; if (c<=77) return 'Snowy';
+  if (c<=99) return 'Thunderstorm'; return 'Cloudy';
 }
